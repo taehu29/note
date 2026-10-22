@@ -1,4 +1,13 @@
 {
-  "objects": [],
+  "objects": [
+    {
+      "id": "b3a8rtc",
+      "left": 19,
+      "top": 9,
+      "width": 21,
+      "height": 11,
+      "contents": ""
+    }
+  ],
   "lines": []
 }
