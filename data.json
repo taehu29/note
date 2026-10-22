@@ -22,7 +22,7 @@
       "top": 94,
       "width": 36,
       "height": 21,
-      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\">$f \\colon A \\to B$에 대하여<br>$\\mkern144mu\\exists f^{-1} \\colon B \\to A,\\;\\bigg\\{\\begin{aligned}& f^{-1 } \\circ f = \\mathrm{id}_{A} \\\\&f \\circ f^{-1} = \\mathrm{id}_{B}\\end{aligned}$<br>를 만족하면</div></div>"
+      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\">$f \\colon A \\to B$에 대하여<br>$\\mkern144mu\\exists f^{-1} \\colon B \\to A,\\;\\bigg\\{\\begin{aligned}& f^{-1 } \\circ f = \\mathrm{id}_{A} \\\\&f \\circ f^{-1} = \\mathrm{id}_{B}\\end{aligned}$<br>를 만족하면 $f$를 <b>isomorphism</b>이라 한다. 또한 두 object $A,B$ 사이에 isomorphism이 존재하면, $A,B$는 <b>isomorphic</b>하다고 하며 $A \\cong B$로 표시한다.</div></div>"
     }
   ],
   "lines": [
