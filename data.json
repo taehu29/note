@@ -9,5 +9,13 @@
       "contents": "Class $\\mathcal{C}$가 아래 조건을 만족하는 다음의 data<br>\\begin{itemize}<br>\\item[left=1em] $\\mathrm{Ob}(\\mathcal{C})$ : class of objects<br>\\end{itemize}<br>\\begin{itemize}<br>\\item[left=1em] $\\mathrm{Mor}(\\mathcal{C})$ : class of morphisms<br>\\end{itemize}<br>로 이루어져 있고,"
     }
   ],
-  "lines": []
+  "lines": [
+    {
+      "id": "lmes4wl",
+      "left": 55,
+      "top": 50,
+      "width": 0,
+      "height": 13
+    }
+  ]
 }
