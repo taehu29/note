@@ -2999,10 +2999,8 @@
             const range = currentSel.getRangeAt(0);
             if (!textEl.contains(range.commonAncestorContainer)) return;
 
-            // 모든 문단/블록 요소(<p>, .bullet-item, div) 수집
-            const allBlocks = Array.from(textEl.children).filter(el => 
-                el.tagName === 'P' || el.classList.contains('bullet-item') || el.tagName === 'DIV'
-            );
+            // 모든 문단/블록 요소(<p>, .bullet-item 내의 <p>, div) 수집
+            const allBlocks = this.getAllParagraphBlocks(textEl);
 
             const targetBlocks = allBlocks.filter(block => {
                 if (range.collapsed) {
@@ -3013,21 +3011,17 @@
             });
 
             if (targetBlocks.length === 0 && allBlocks.length > 0) {
-                targetBlocks.push(allBlocks[0]);
+                let cur = this.getCurrentBlock(textEl);
+                if (cur) {
+                    const deep = this.getDeepestParagraph(cur, true);
+                    if (deep) targetBlocks.push(deep);
+                    else targetBlocks.push(cur);
+                } else {
+                    targetBlocks.push(allBlocks[0]);
+                }
             }
 
-            targetBlocks.forEach(block => {
-                let target = block;
-                if (block.classList.contains('bullet-item')) {
-                    let node = range.startContainer;
-                    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
-                    const pInBullet = node?.closest?.('p');
-                    if (pInBullet && block.contains(pInBullet)) {
-                        target = pInBullet;
-                    } else {
-                        target = block.querySelector('.bullet-content') || block;
-                    }
-                }
+            targetBlocks.forEach(target => {
                 if (!target) return;
 
                 if (alignType === 'left') {
@@ -3099,15 +3093,25 @@
             }
 
             targetBlocks.forEach(block => {
-                const curPadding = this.getBlockIndent(block);
+                let target = block;
+                if (range.collapsed && block.classList && block.classList.contains('bullet-item')) {
+                    let node = range.startContainer;
+                    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+                    const innerBullet = node?.closest?.('.bullet-item');
+                    if (innerBullet && block.contains(innerBullet)) {
+                        target = innerBullet;
+                    }
+                }
+
+                const curPadding = this.getBlockIndent(target);
                 const nextPadding = Math.max(0, Math.min(10, Math.round(curPadding + delta)));
 
                 if (nextPadding > 0) {
-                    block.style.paddingLeft = `${nextPadding}em`;
+                    target.style.paddingLeft = `${nextPadding}em`;
                 } else {
-                    block.style.paddingLeft = '';
-                    if (!block.getAttribute('style') || block.style.cssText.trim() === '') {
-                        block.removeAttribute('style');
+                    target.style.paddingLeft = '';
+                    if (!target.getAttribute('style') || target.style.cssText.trim() === '') {
+                        target.removeAttribute('style');
                     }
                 }
             });
@@ -3120,7 +3124,16 @@
         getBlockMarginBottom(block) {
             if (!block || !block.style) return 0;
             const mb = block.style.marginBottom || '';
-            if (!mb) return 0;
+            if (!mb) {
+                // block이 <p>이고 부모 bullet-item에 legacy marginBottom이 있다면 참조
+                const parentBullet = block.closest?.('.bullet-item');
+                if (parentBullet && parentBullet.style?.marginBottom) {
+                    const matchParent = parentBullet.style.marginBottom.match(/^([+-]?[\d.]+)\s*em$/i);
+                    if (matchParent) return parseFloat(matchParent[1]) || 0;
+                    return parseFloat(parentBullet.style.marginBottom) || 0;
+                }
+                return 0;
+            }
             const match = mb.match(/^([+-]?[\d.]+)\s*em$/i);
             if (match) {
                 return parseFloat(match[1]) || 0;
@@ -3202,10 +3215,8 @@
             const range = currentSel.getRangeAt(0);
             if (!textEl.contains(range.commonAncestorContainer)) return;
 
-            // 모든 문단/블록 요소(<p>, .bullet-item, div) 수집
-            const allBlocks = Array.from(textEl.children).filter(el => 
-                el.tagName === 'P' || el.classList.contains('bullet-item') || el.tagName === 'DIV'
-            );
+            // 모든 문단/블록 요소(<p>, .bullet-item 내의 <p>, div) 수집
+            const allBlocks = this.getAllParagraphBlocks(textEl);
 
             const targetBlocks = allBlocks.filter(block => {
                 if (range.collapsed) {
@@ -3216,9 +3227,14 @@
             });
 
             if (targetBlocks.length === 0 && allBlocks.length > 0) {
-                const cur = this.getCurrentBlock(textEl);
-                if (cur) targetBlocks.push(cur);
-                else targetBlocks.push(allBlocks[0]);
+                let cur = this.getCurrentBlock(textEl);
+                if (cur) {
+                    const deep = this.getDeepestParagraph(cur, true);
+                    if (deep) targetBlocks.push(deep);
+                    else targetBlocks.push(cur);
+                } else {
+                    targetBlocks.push(allBlocks[0]);
+                }
             }
 
             let lastVal = 0;
@@ -3234,6 +3250,15 @@
                     block.style.marginBottom = '';
                     if (!block.getAttribute('style') || block.style.cssText.trim() === '') {
                         block.removeAttribute('style');
+                    }
+                }
+
+                // block이 <p>이고 부모 bullet-item에 legacy marginBottom이 있다면 정리하여 충돌 방지
+                const parentBullet = block.closest?.('.bullet-item');
+                if (parentBullet && parentBullet.style?.marginBottom) {
+                    parentBullet.style.marginBottom = '';
+                    if (!parentBullet.getAttribute('style') || parentBullet.style.cssText.trim() === '') {
+                        parentBullet.removeAttribute('style');
                     }
                 }
             });
@@ -3343,45 +3368,6 @@
                 }
             }
             return null;
-        }
-
-        isCaretAtStart(el) {
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return false;
-            const range = sel.getRangeAt(0);
-            if (!range.collapsed) return false;
-
-            const testRange = range.cloneRange();
-            testRange.selectNodeContents(el);
-            testRange.setEnd(range.startContainer, range.startOffset);
-            return testRange.toString().length === 0;
-        }
-
-        isCaretAtEnd(el) {
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return false;
-            const range = sel.getRangeAt(0);
-            if (!range.collapsed) return false;
-
-            const testRange = range.cloneRange();
-            testRange.selectNodeContents(el);
-            testRange.setStart(range.endContainer, range.endOffset);
-            return testRange.toString().length === 0;
-        }
-
-        focusBlock(el, atStart = true) {
-            if (!el) return;
-            el.focus();
-            try {
-                const range = document.createRange();
-                range.selectNodeContents(el);
-                range.collapse(atStart);
-                const sel = window.getSelection();
-                if (sel) {
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                }
-            } catch (_) {}
         }
 
         placeCaretAtNodeStart(node) {
@@ -3501,6 +3487,10 @@
             if (!range.collapsed) return false;
             if (!element.contains(range.startContainer)) return false;
 
+            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') && 
+                !element.querySelector('.inline-math, .inline-graph, img');
+            if (isEmptyOrOnlyBr) return true;
+
             const testRange = document.createRange();
             testRange.setStart(element, 0);
             testRange.setEnd(range.startContainer, range.startOffset);
@@ -3519,6 +3509,10 @@
             if (!range.collapsed) return false;
             if (!element.contains(range.endContainer)) return false;
 
+            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') && 
+                !element.querySelector('.inline-math, .inline-graph, img');
+            if (isEmptyOrOnlyBr) return true;
+
             const testRange = document.createRange();
             testRange.setStart(range.endContainer, range.endOffset);
             testRange.setEnd(element, element.childNodes.length);
@@ -3527,6 +3521,73 @@
             if (text.length > 0) return false;
             if (frag.querySelector && (frag.querySelector('.inline-math, .inline-graph') || frag.querySelector('img') || frag.querySelector('br'))) return false;
             return true;
+        }
+
+        getDeepestParagraph(block, atEnd = true) {
+            if (!block) return null;
+            if (block.classList && block.classList.contains('bullet-item')) {
+                const contentEl = block.querySelector('.bullet-content');
+                if (!contentEl) return block;
+
+                if (!contentEl.querySelector('p')) {
+                    const newP = document.createElement('p');
+                    while (contentEl.firstChild) {
+                        newP.appendChild(contentEl.firstChild);
+                    }
+                    if (!newP.childNodes.length || (newP.textContent === '' && !newP.querySelector('.inline-math, .inline-graph'))) {
+                        newP.innerHTML = '<br>';
+                    }
+                    contentEl.appendChild(newP);
+                }
+
+                if (atEnd) {
+                    let candidate = contentEl.lastElementChild;
+                    while (candidate && candidate.classList && candidate.classList.contains('bullet-item')) {
+                        const subContent = candidate.querySelector('.bullet-content');
+                        if (subContent && subContent.lastElementChild) {
+                            candidate = subContent.lastElementChild;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (candidate && candidate.tagName === 'P') return candidate;
+                    const allP = contentEl.querySelectorAll('p');
+                    if (allP.length > 0) return allP[allP.length - 1];
+                    return contentEl;
+                } else {
+                    let candidate = contentEl.firstElementChild;
+                    while (candidate && candidate.classList && candidate.classList.contains('bullet-item')) {
+                        const subContent = candidate.querySelector('.bullet-content');
+                        if (subContent && subContent.firstElementChild) {
+                            candidate = subContent.firstElementChild;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (candidate && candidate.tagName === 'P') return candidate;
+                    const firstP = contentEl.querySelector('p');
+                    if (firstP) return firstP;
+                    return contentEl;
+                }
+            }
+            return block;
+        }
+
+        getAllParagraphBlocks(textEl) {
+            const blocks = [];
+            Array.from(textEl.children).forEach(child => {
+                if (child.classList && child.classList.contains('bullet-item')) {
+                    const ps = Array.from(child.querySelectorAll('p'));
+                    if (ps.length > 0) {
+                        ps.forEach(p => blocks.push(p));
+                    } else {
+                        blocks.push(child);
+                    }
+                } else if (child.tagName === 'P' || child.tagName === 'DIV') {
+                    blocks.push(child);
+                }
+            });
+            return blocks;
         }
 
         getCurrentBlock(textEl) {
@@ -3607,8 +3668,7 @@
                 this.placeCaretAtNodeEnd(el);
                 return;
             }
-            const target = lastChild.classList.contains('bullet-item') ? 
-                (lastChild.querySelector('.bullet-content') || lastChild) : lastChild;
+            const target = this.getDeepestParagraph(lastChild, true);
             this.focusBlock(target, false);
         }
 
@@ -3635,8 +3695,7 @@
                 if (range.startContainer === textEl) {
                     const block = textEl.children[range.startOffset] || textEl.lastElementChild;
                     if (block) {
-                        const target = block.classList.contains('bullet-item') ?
-                            (block.querySelector('.bullet-content') || block) : block;
+                        const target = this.getDeepestParagraph(block, false);
                         this.focusBlock(target, false);
                         return;
                     }
@@ -3800,11 +3859,11 @@
             const currentBlock = this.getCurrentBlock(textEl);
             if (!currentBlock) return;
 
-            // 글머리 기호 내부인지 확인
+            // 글머리 기호 내부인지 확인 (중첩 글머리가 있는 경우 가장 가까운 bullet-item 우선)
             let bulletNode = range.startContainer;
             if (bulletNode.nodeType === Node.TEXT_NODE) bulletNode = bulletNode.parentNode;
-            const currentBullet = currentBlock.classList.contains('bullet-item') ? 
-                currentBlock : (currentBlock.closest?.('.bullet-item') || bulletNode?.closest?.('.bullet-item'));
+            const currentBullet = bulletNode?.closest?.('.bullet-item') || 
+                (currentBlock?.classList?.contains('bullet-item') ? currentBlock : currentBlock?.closest?.('.bullet-item'));
 
             if (currentBullet && textEl.contains(currentBullet)) {
                 const contentEl = currentBullet.querySelector('.bullet-content');
@@ -3873,8 +3932,7 @@
             e.stopPropagation();
 
             const isCurEmpty = (!currentBlock.textContent || currentBlock.textContent.trim() === '') && !currentBlock.querySelector('.inline-math, .inline-graph');
-            const targetPrev = prevBlock.classList.contains('bullet-item') ? 
-                (prevBlock.querySelector('.bullet-content') || prevBlock) : prevBlock;
+            const targetPrev = this.getDeepestParagraph(prevBlock, true);
 
             if (isCurEmpty) {
                 currentBlock.remove();
@@ -3909,7 +3967,7 @@
                     sel.removeAllRanges();
                     sel.addRange(r);
                 } else {
-                    this.focusBlock(firstMovedChild, true);
+                    this.placeCaretBeforeNode(firstMovedChild);
                 }
             } else {
                 this.focusBlock(targetPrev, false);
@@ -3944,8 +4002,7 @@
             const currentBlock = this.getCurrentBlock(textEl);
             if (!currentBlock) return;
 
-            const targetCurrent = currentBlock.classList.contains('bullet-item') ?
-                (currentBlock.querySelector('.bullet-content') || currentBlock) : currentBlock;
+            const targetCurrent = this.getDeepestParagraph(currentBlock, true);
 
             if (!this.isCaretAtEnd(targetCurrent)) return;
 
@@ -3955,8 +4012,7 @@
             e.preventDefault();
             e.stopPropagation();
 
-            const targetNext = nextBlock.classList.contains('bullet-item') ?
-                (nextBlock.querySelector('.bullet-content') || nextBlock) : nextBlock;
+            const targetNext = this.getDeepestParagraph(nextBlock, false);
 
             const isNextEmpty = (!targetNext.textContent || targetNext.textContent.trim() === '') && !targetNext.querySelector('.inline-math, .inline-graph');
 
@@ -3983,13 +4039,9 @@
                     sel.removeAllRanges();
                     sel.addRange(r);
                 } else {
-                    this.focusBlock(firstMovedChild, true);
+                    this.placeCaretBeforeNode(firstMovedChild);
                 }
             }
-        }
-
-        cleanHtmlLineBreaks(html) {
-            return html || '';
         }
 
         bindTextEvents(textEl, boxEl) {
