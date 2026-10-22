@@ -22,7 +22,7 @@
       "top": 94,
       "width": 36,
       "height": 21,
-      "contents": ""
+      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\">$f \\colon A \\to B$에 대하여</div></div>"
     }
   ],
   "lines": [
