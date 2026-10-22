@@ -6,7 +6,7 @@
       "top": 56,
       "width": 36,
       "height": 18,
-      "contents": "<p style=\"margin-bottom: 0.5em;\">Class $\\mathcal{C}$가 아래 조건을 만족하는 다음의 data</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\">$\\mathrm{Ob}(\\mathcal{C})$ : class of objects</div></div><div class=\"bullet-item\" style=\"padding-left: 1em; margin-bottom: 0.5em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\">$\\mathrm{Mor}(\\mathcal{C})$ : class of morphisms</div></div><p>로 이루어져 있고,</p>"
+      "contents": "<p style=\"margin-bottom: 0.5em;\">Class $\\mathcal{C}$가 다음을 만족하는 data</p>"
     }
   ],
   "lines": []
