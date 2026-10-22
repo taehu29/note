@@ -6,7 +6,7 @@
       "top": 56,
       "width": 36,
       "height": 18,
-      "contents": "Class $\\mathcal{C}$가 아래 조건을 만족하는 다음의 data"
+      "contents": "Class $\\mathcal{C}$가 아래 조건을 만족하는 다음의 data \\vspace{0.5em}<br>\\begin{itemize}<br>\\item[left=1em] $\\mathrm{Ob}(\\mathcal{C})$ : class of objects<br>\\item[left=1em][margin=0.5em] $\\mathrm{Mor}(\\mathcal{C})$ : class of morphisms<br>\\end{itemize}로 이루어져 있고,"
     }
   ],
   "lines": []
