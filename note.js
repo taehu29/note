@@ -1055,160 +1055,26 @@
 
     function serializeHtmlToText(textEl) {
         if (!textEl) return '';
+        const clone = textEl.cloneNode(true);
 
-        function serializeInline(node) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                return (node.nodeValue || '').replace(/\r?\n/g, ' ');
-            }
-            if (node.nodeType !== Node.ELEMENT_NODE) {
-                return '';
-            }
+        // 1. 인라인 수식 (.inline-math) -> 원본 LaTeX ($...$) 텍스트 노드로 치환
+        clone.querySelectorAll('.inline-math').forEach(el => {
+            const latex = (el.dataset.latex || '').trim();
+            el.replaceWith(document.createTextNode(latex ? `$${latex}$` : ''));
+        });
 
-            const tag = node.tagName.toLowerCase();
+        // 2. 인라인 그래프 (.inline-graph) -> 원본 TikZ 텍스트 노드로 치환
+        clone.querySelectorAll('.inline-graph').forEach(el => {
+            const tikz = (el.dataset.tikz || '').trim();
+            el.replaceWith(document.createTextNode(tikz ? `\\begin{tikzpicture}\n${tikz}\n\\end{tikzpicture}` : ''));
+        });
 
-            if (tag === 'br') {
-                return '<br>';
-            }
+        // 3. KaTeX 내부 렌더링 잔재 및 편집용 임시 보조 태그 제거
+        clone.querySelectorAll('.trailing-soft-br').forEach(el => el.remove());
+        clone.querySelectorAll('.katex, .katex-html').forEach(el => el.remove());
 
-            if (node.classList && node.classList.contains('inline-math')) {
-                const latex = (node.dataset.latex || '').trim();
-                return latex ? `$${latex}$` : '';
-            }
-
-            if (node.classList && node.classList.contains('inline-graph')) {
-                const tikz = (node.dataset.tikz || '').trim();
-                return tikz ? `\\begin{tikzpicture}\n${tikz}\n\\end{tikzpicture}` : '';
-            }
-
-            // KaTeX 내부 렌더링 스팬이 실수로 섞여 들어간 경우 무시
-            if (node.classList && (node.classList.contains('katex') || node.classList.contains('katex-html'))) {
-                return '';
-            }
-
-            let inner = '';
-            for (let child of node.childNodes) {
-                inner += serializeInline(child);
-            }
-
-            const isBold = tag === 'b' || tag === 'strong' || (node.style && (node.style.fontWeight === 'bold' || parseInt(node.style.fontWeight) >= 600));
-            const isItalic = tag === 'i' || tag === 'em' || (node.style && node.style.fontStyle === 'italic');
-            const isUnderline = tag === 'u' || (node.style && node.style.textDecoration && node.style.textDecoration.includes('underline'));
-
-            let formatted = inner;
-            if (isUnderline) formatted = `<u>${formatted}</u>`;
-            if (isItalic) formatted = `<i>${formatted}</i>`;
-            if (isBold) formatted = `<b>${formatted}</b>`;
-
-            return formatted;
-        }
-
-        const blocks = [];
-
-        for (let child of Array.from(textEl.childNodes)) {
-            if (child.nodeType === Node.ELEMENT_NODE) {
-                const tag = child.tagName.toLowerCase();
-
-                if (tag === 'p' || (tag === 'div' && !child.classList.contains('bullet-item'))) {
-                    const align = child.style.textAlign || '';
-                    const padding = child.style.paddingLeft || '';
-                    const margin = child.style.marginBottom || '';
-
-                    const styles = [];
-                    if (align) styles.push(`text-align: ${align};`);
-                    if (padding) styles.push(`padding-left: ${padding};`);
-                    if (margin) styles.push(`margin-bottom: ${margin};`);
-                    const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
-
-                    let inner = '';
-                    for (let c of child.childNodes) {
-                        inner += serializeInline(c);
-                    }
-                    inner = inner.trim();
-                    if (!inner || inner === '<br>') {
-                        blocks.push('<p><br></p>');
-                    } else {
-                        blocks.push(`<p${styleAttr}>${inner}</p>`);
-                    }
-                } else if (child.classList && child.classList.contains('bullet-item')) {
-                    const markerEl = child.querySelector('.bullet-marker');
-                    const marker = markerEl ? (markerEl.textContent || '').trim() : '•';
-                    const contentEl = child.querySelector('.bullet-content');
-
-                    let innerContent = '';
-                    if (contentEl) {
-                        const childPs = Array.from(contentEl.children).filter(c => c.tagName === 'P');
-                        if (childPs.length > 0) {
-                            innerContent = childPs.map(p => {
-                                const align = p.style.textAlign || '';
-                                const styles = [];
-                                if (align) styles.push(`text-align: ${align};`);
-                                if (p.style.marginBottom) styles.push(`margin-bottom: ${p.style.marginBottom};`);
-                                const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
-
-                                let pText = '';
-                                for (let c of p.childNodes) {
-                                    pText += serializeInline(c);
-                                }
-                                pText = pText.trim();
-                                if (!pText || pText === '<br>') return '<p><br></p>';
-                                return `<p${styleAttr}>${pText}</p>`;
-                            }).join('');
-                        } else {
-                            for (let c of contentEl.childNodes) {
-                                innerContent += serializeInline(c);
-                            }
-                            innerContent = innerContent.trim() || '<br>';
-                            if (!/<p\b/i.test(innerContent)) {
-                                innerContent = `<p>${innerContent}</p>`;
-                            }
-                        }
-                    }
-                    if (!innerContent) innerContent = '<p><br></p>';
-
-                    const padding = child.style.paddingLeft || '';
-                    const margin = child.style.marginBottom || '';
-                    const styles = [];
-                    if (padding) styles.push(`padding-left: ${padding};`);
-                    if (margin) styles.push(`margin-bottom: ${margin};`);
-                    const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
-
-                    blocks.push(`<div class="bullet-item"${styleAttr}><span class="bullet-marker" contenteditable="false">${escapeHtmlAttr(marker)}</span><div class="bullet-content">${innerContent}</div></div>`);
-                } else if (tag === 'br') {
-                    blocks.push('<p><br></p>');
-                } else {
-                    const inline = serializeInline(child).trim();
-                    if (inline) blocks.push(`<p>${inline}</p>`);
-                }
-            } else if (child.nodeType === Node.TEXT_NODE) {
-                const val = (child.nodeValue || '').trim();
-                if (val) blocks.push(`<p>${val}</p>`);
-            }
-        }
-
-        // 연속된 빈 문단(<p><br></p>)이 2개 초과로 증식하지 않도록 정리
-        const cleaned = [];
-        let emptyCount = 0;
-        for (let b of blocks) {
-            if (b === '<p><br></p>') {
-                emptyCount++;
-                if (emptyCount <= 2) {
-                    cleaned.push(b);
-                }
-            } else {
-                emptyCount = 0;
-                cleaned.push(b);
-            }
-        }
-
-        // 맨 앞과 맨 뒤의 불필요한 빈 문단 제거
-        while (cleaned.length > 0 && cleaned[0] === '<p><br></p>') {
-            cleaned.shift();
-        }
-        while (cleaned.length > 0 && cleaned[cleaned.length - 1] === '<p><br></p>') {
-            cleaned.pop();
-        }
-
-        return cleaned.join('');
+        // 4. DOM 구조와 스타일, 중첩 글머리 기호 전체를 100% 무손실로 반환
+        return clone.innerHTML.trim();
     }
 
     // =========================================================================
@@ -2657,7 +2523,7 @@
                 const sel = window.getSelection();
                 sel?.removeAllRanges();
                 sel?.addRange(range);
-            } catch (_) {}
+            } catch (_) { }
         }
 
         positionMarkerBubble(markerEl) {
@@ -2829,7 +2695,7 @@
                         currentP.after(newSubBullet);
                     }
                 } else {
-                    currentBullet.after(newSubBullet);
+                    contentEl.appendChild(newSubBullet);
                 }
 
                 const targetFocus = newSubBullet.querySelector('.bullet-content p') || newSubBullet.querySelector('.bullet-content');
@@ -2916,35 +2782,41 @@
         }
 
         removeBulletItem(currentBullet) {
-            const contentEl = currentBullet.querySelector('.bullet-content');
+            let contentEl = null;
+            for (let c of currentBullet.children) {
+                if (c.classList && c.classList.contains('bullet-content')) {
+                    contentEl = c;
+                    break;
+                }
+            }
             const textEl = this.activeBox?.querySelector('.box-text');
             if (!textEl || !contentEl) return;
 
-            const pList = Array.from(contentEl.children).filter(c => c.tagName === 'P');
+            const childNodes = Array.from(contentEl.childNodes);
 
-            if (pList.length > 0) {
+            if (childNodes.length > 0) {
                 let insertRef = currentBullet;
-                pList.forEach(p => {
-                    if (currentBullet.style.paddingLeft && !p.style.paddingLeft) {
-                        p.style.paddingLeft = currentBullet.style.paddingLeft;
+                let firstFocus = null;
+                childNodes.forEach(child => {
+                    if (currentBullet.style.paddingLeft && child.nodeType === Node.ELEMENT_NODE && !child.style.paddingLeft) {
+                        child.style.paddingLeft = currentBullet.style.paddingLeft;
                     }
-                    insertRef.after(p);
-                    insertRef = p;
+                    insertRef.after(child);
+                    insertRef = child;
+                    if (!firstFocus && child.nodeType === Node.ELEMENT_NODE) {
+                        firstFocus = child;
+                    }
                 });
-                const firstP = pList[0];
                 currentBullet.remove();
-                this.focusBlock(firstP, true);
+                if (firstFocus) {
+                    this.focusBlock(firstFocus, true);
+                }
             } else {
                 const p = document.createElement('p');
                 if (currentBullet.style.paddingLeft) {
                     p.style.paddingLeft = currentBullet.style.paddingLeft;
                 }
-                while (contentEl.firstChild) {
-                    p.appendChild(contentEl.firstChild);
-                }
-                if (!p.childNodes.length || (p.textContent === '' && !p.querySelector('.inline-math, .inline-graph'))) {
-                    p.innerHTML = '<br>';
-                }
+                p.innerHTML = '<br>';
                 currentBullet.replaceWith(p);
                 this.focusBlock(p, true);
             }
@@ -2965,7 +2837,7 @@
 
             try {
                 document.execCommand('styleWithCSS', false, false);
-            } catch (_) {}
+            } catch (_) { }
 
             if (formatType === 'bold') {
                 document.execCommand('bold', false, null);
@@ -3074,7 +2946,7 @@
             if (!textEl.contains(range.commonAncestorContainer)) return;
 
             // 모든 문단/블록 요소(<p>, .bullet-item, div) 수집
-            const allBlocks = Array.from(textEl.children).filter(el => 
+            const allBlocks = Array.from(textEl.children).filter(el =>
                 el.tagName === 'P' || el.classList.contains('bullet-item') || el.tagName === 'DIV'
             );
 
@@ -3487,7 +3359,7 @@
             if (!range.collapsed) return false;
             if (!element.contains(range.startContainer)) return false;
 
-            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') && 
+            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') &&
                 !element.querySelector('.inline-math, .inline-graph, img');
             if (isEmptyOrOnlyBr) return true;
 
@@ -3509,7 +3381,7 @@
             if (!range.collapsed) return false;
             if (!element.contains(range.endContainer)) return false;
 
-            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') && 
+            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') &&
                 !element.querySelector('.inline-math, .inline-graph, img');
             if (isEmptyOrOnlyBr) return true;
 
@@ -3862,7 +3734,7 @@
             // 글머리 기호 내부인지 확인 (중첩 글머리가 있는 경우 가장 가까운 bullet-item 우선)
             let bulletNode = range.startContainer;
             if (bulletNode.nodeType === Node.TEXT_NODE) bulletNode = bulletNode.parentNode;
-            const currentBullet = bulletNode?.closest?.('.bullet-item') || 
+            const currentBullet = bulletNode?.closest?.('.bullet-item') ||
                 (currentBlock?.classList?.contains('bullet-item') ? currentBlock : currentBlock?.closest?.('.bullet-item'));
 
             if (currentBullet && textEl.contains(currentBullet)) {
@@ -4439,7 +4311,7 @@
         cancelDraw() {
             if (this.drawInfo) {
                 if (this.drawInfo.pointerId !== undefined) {
-                    try { document.body.releasePointerCapture(this.drawInfo.pointerId); } catch (_) {}
+                    try { document.body.releasePointerCapture(this.drawInfo.pointerId); } catch (_) { }
                 }
                 if (this.drawInfo.element) {
                     this.drawInfo.element.remove();
@@ -4699,7 +4571,7 @@
                     this.viewport.startPanX = this.viewport.panX;
                     this.viewport.startPanY = this.viewport.panY;
                     document.body.classList.add('is-panning');
-                    try { document.body.setPointerCapture(e.pointerId); } catch (_) {}
+                    try { document.body.setPointerCapture(e.pointerId); } catch (_) { }
                     return;
                 }
 
@@ -4742,7 +4614,7 @@
                     if (this.longPressTimer) clearTimeout(this.longPressTimer);
                     this.longPressTimer = setTimeout(() => {
                         this.longPressTimer = null;
-                        try { navigator.vibrate?.(40); } catch (_) {}
+                        try { navigator.vibrate?.(40); } catch (_) { }
                         if (this.marqueeData) {
                             if (this.marqueeEl) this.marqueeEl.style.display = 'none';
                             this.marqueeData = null;
@@ -4806,7 +4678,7 @@
                             startCellY,
                             element: boxDiv
                         };
-                        try { document.body.setPointerCapture(e.pointerId); } catch (_) {}
+                        try { document.body.setPointerCapture(e.pointerId); } catch (_) { }
                         this.viewport.showTooltip(e.clientX + 14, e.clientY + 14, 'W: 1em, H: 1em', 0);
                         return;
                     } else if (this.addModeManager.currentMode === 'line') {
@@ -4818,7 +4690,7 @@
                             startCellY,
                             element: lineDiv
                         };
-                        try { document.body.setPointerCapture(e.pointerId); } catch (_) {}
+                        try { document.body.setPointerCapture(e.pointerId); } catch (_) { }
                         this.viewport.showTooltip(e.clientX + 14, e.clientY + 14, 'W: 0em, H: 0em', 0);
                         return;
                     }
@@ -4892,7 +4764,7 @@
                             connectedPoints,
                             isDragging: false
                         };
-                        try { document.body.setPointerCapture(e.pointerId); } catch (_) {}
+                        try { document.body.setPointerCapture(e.pointerId); } catch (_) { }
                         return;
                     }
                 }
@@ -4921,7 +4793,7 @@
                             pointerId: e.pointerId,
                             isDragging: false
                         };
-                        try { document.body.setPointerCapture(e.pointerId); } catch (_) {}
+                        try { document.body.setPointerCapture(e.pointerId); } catch (_) { }
                         return;
                     }
                 }
@@ -5066,7 +4938,7 @@
                         isShift: e.shiftKey,
                         initialSelection: new Set(this.selectionManager.selectedElements)
                     };
-                    try { document.body.setPointerCapture(e.pointerId); } catch (_) {}
+                    try { document.body.setPointerCapture(e.pointerId); } catch (_) { }
                 }
             });
 
@@ -5349,7 +5221,7 @@
                         if (Math.hypot(e.clientX - this.moveData.startClientX, e.clientY - this.moveData.startClientY) > 3) {
                             this.moveData.isDragging = true;
                             document.body.classList.add('is-moving-objects');
-                            try { document.body.setPointerCapture(e.pointerId); } catch (_) {}
+                            try { document.body.setPointerCapture(e.pointerId); } catch (_) { }
                         }
                     }
 
@@ -5484,7 +5356,7 @@
             const endAction = (e) => {
                 // 0. 박스 또는 선 드래그 생성 완료 처리
                 if (this.drawInfo && this.drawInfo.pointerId === e.pointerId) {
-                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) {}
+                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) { }
                     this.viewport.hideTooltip();
 
                     const createdElement = this.drawInfo.element;
@@ -5535,13 +5407,13 @@
                 if (this.viewport.isPanning) {
                     this.viewport.isPanning = false;
                     document.body.classList.remove('is-panning');
-                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) {}
+                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) { }
                     this.store.queueRenderVisibleBoxes(50);
                 }
 
                 // B. 에지/선 끝점 리사이즈 종료
                 if (this.resizeData && this.resizeData.pointerId === e.pointerId) {
-                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) {}
+                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) { }
                     document.body.classList.remove('is-resizing-ns', 'is-resizing-ew');
                     this.viewport.hideTooltip();
                     if (this.resizeData.isDragging) {
@@ -5555,7 +5427,7 @@
                 // C. 개체 이동 종료
                 if (this.moveData && this.moveData.pointerId === e.pointerId) {
                     if (this.moveData.isDragging) {
-                        try { document.body.releasePointerCapture(e.pointerId); } catch (_) {}
+                        try { document.body.releasePointerCapture(e.pointerId); } catch (_) { }
                         document.body.classList.remove('is-moving-objects');
                         this.viewport.hideTooltip();
                         if (this.historyManager) this.historyManager.commitAction();
@@ -5577,7 +5449,7 @@
 
                 // D. 영역 선택(Marquee) 종료 및 박스 접촉 개체 판정
                 if (this.marqueeData && this.marqueeData.pointerId === e.pointerId) {
-                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) {}
+                    try { document.body.releasePointerCapture(e.pointerId); } catch (_) { }
 
                     if (this.marqueeData.isDragging) {
                         const currPos = this.viewport.screenToGridFloat(e.clientX, e.clientY);
@@ -5781,7 +5653,7 @@
                         return parsed;
                     }
                 }
-            } catch (_) {}
+            } catch (_) { }
 
             if (window.GITHUB_CONFIG && window.GITHUB_CONFIG.owner && window.GITHUB_CONFIG.repo && window.GITHUB_CONFIG.token) {
                 return window.GITHUB_CONFIG;
@@ -6020,7 +5892,7 @@
                             const fileInfo = await checkRes.json();
                             this.fileSha = fileInfo.sha;
                         }
-                    } catch (_) {}
+                    } catch (_) { }
                 }
 
                 const jsonStr = JSON.stringify(currentData, null, 2);
