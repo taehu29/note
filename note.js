@@ -754,10 +754,54 @@
     }
 
     function parseMathToHtml(rawText) {
-        if (!rawText) return '';
+        if (!rawText) return '<p><br></p>';
+
+        // 1. 이미 정제된 Clean HTML 포맷인지 확인 (<p... 또는 <div class="bullet-item"...)
+        const isCleanHtml = /<p\b|<div class="bullet-item"/i.test(rawText);
+
+        let html = '';
+        if (isCleanHtml) {
+            html = rawText;
+            // bullet-marker의 contenteditable="false" 속성 보장
+            html = html.replace(/<span class="bullet-marker"([^>]*)>/gi, (m, attrs) => {
+                if (/contenteditable/i.test(attrs)) return m;
+                return `<span class="bullet-marker"${attrs} contenteditable="false">`;
+            });
+        } else {
+            // 구버전 데이터(LaTeX 문법 및 raw text)를 Clean HTML로 안전하게 마이그레이션 변환
+            html = parseLegacyLatexToCleanHtml(rawText);
+        }
+
+        // 2. TikZ 그래프 블록 (\begin{tikzpicture}...\end{tikzpicture}) 렌더링
+        html = html.replace(/\\begin\{tikzpicture\}([\s\S]*?)\\end\{tikzpicture\}/gi, (match, body) => {
+            const cleanTikz = body.trim();
+            const rendered = renderTikzToHtml(cleanTikz);
+            return `<span class="inline-graph" data-tikz="${escapeHtmlAttr(cleanTikz)}" contenteditable="false">${rendered.trim()}</span>`;
+        });
+
+        // 3. 수식 블록 ($$...$$, \[...\], $...$) 렌더링
+        // 디스플레이 수식 ($$...$$ 또는 \[...\])
+        html = html.replace(/(?<!\\)(?:\$\$([\s\S]*?)(?<!\\)\$\$|\\\[([\s\S]*?)\\\])/g, (match, m1, m2) => {
+            const math = (m1 !== undefined ? m1 : m2).trim();
+            const rendered = renderLatexToHtml(math, false);
+            return `<span class="inline-math" data-latex="${escapeHtmlAttr(math)}" contenteditable="false">${rendered}</span>`;
+        });
+
+        // 인라인 수식 ($...$)
+        html = html.replace(/(?<!\\)\$(?!\$)([\s\S]*?)(?<!\\)\$/g, (match, math) => {
+            const cleanMath = math.trim();
+            const rendered = renderLatexToHtml(cleanMath, false);
+            return `<span class="inline-math" data-latex="${escapeHtmlAttr(cleanMath)}" contenteditable="false">${rendered}</span>`;
+        });
+
+        return html || '<p><br></p>';
+    }
+
+    function parseLegacyLatexToCleanHtml(rawText) {
+        if (!rawText) return '<p><br></p>';
         let text = rawText;
 
-        // 1. 기존 데이터에 혹시 남아있을 수 있는 HTML 엔티티 이중 인코딩 정제
+        // 1. 기존 데이터의 HTML 엔티티 정제
         text = text
             .replace(/&amp;lt;/g, '<')
             .replace(/&amp;gt;/g, '>')
@@ -766,177 +810,150 @@
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&');
 
-        // 기존 데이터에 포함된 HTML 서식 태그를 \textbf / \textit / \underline으로 정규화
+        // 기존 HTML 서식 태그를 표준 <b>, <i>, <u> 태그로 정규화
         text = text
-            .replace(/<(?:strong|b)>(.*?)<\/(?:strong|b)>/gi, '\\textbf{$1}')
-            .replace(/<(?:em|i)>(.*?)<\/(?:em|i)>/gi, '\\textit{$1}')
-            .replace(/<u>(.*?)<\/u>/gi, '\\underline{$1}')
-            .replace(/<\/?p\b[^>]*>/gi, '')
-            .replace(/<\/?div\b[^>]*>/gi, '');
+            .replace(/<(?:strong|b)>(.*?)<\/(?:strong|b)>/gi, '<b>$1</b>')
+            .replace(/<(?:em|i)>(.*?)<\/(?:em|i)>/gi, '<i>$1</i>')
+            .replace(/<u>(.*?)<\/u>/gi, '<u>$1</u>');
 
-        // 1-b. TikZ 그래프 블록 (\begin{tikzpicture}...\end{tikzpicture})을 안전하게 추출하여 토큰으로 마스킹
-        const tikzTokens = [];
-        text = text.replace(/\\begin\{tikzpicture\}([\s\S]*?)\\end\{tikzpicture\}/gi, (match, body) => {
-            const cleanTikz = body.trim();
-            const rendered = renderTikzToHtml(cleanTikz);
-            const token = `___TIKZ_TOKEN_${tikzTokens.length}___`;
-            tikzTokens.push(`<span class="inline-graph" data-tikz="${escapeHtmlAttr(cleanTikz)}" contenteditable="false">${rendered.trim()}</span>`);
-            return token;
-        });
-
-        // 2. 수식 블록 ($$...$$ 및 $...$)을 안전하게 추출하여 토큰으로 마스킹
+        // 2. 수식 마스킹 (LaTeX 환경 파싱 중 특수문자 및 옵션 충돌 방지)
         const mathTokens = [];
-
-        // $$...$$ (디스플레이 수식)
         text = text.replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (match, math) => {
-            const cleanMath = math.trim();
-            const rendered = renderLatexToHtml(cleanMath, false);
             const token = `___MATH_TOKEN_${mathTokens.length}___`;
-            mathTokens.push(`<span class="inline-math" data-latex="${escapeHtmlAttr(cleanMath)}" contenteditable="false">${rendered}</span>`);
+            mathTokens.push(`$$${math.trim()}$$`);
             return token;
         });
-
-        // $...$ (인라인 수식)
         text = text.replace(/(?<!\\)\$(?!\$)([\s\S]*?)(?<!\\)\$/g, (match, math) => {
-            const cleanMath = math.trim();
-            const rendered = renderLatexToHtml(cleanMath, false);
             const token = `___MATH_TOKEN_${mathTokens.length}___`;
-            mathTokens.push(`<span class="inline-math" data-latex="${escapeHtmlAttr(cleanMath)}" contenteditable="false">${rendered}</span>`);
+            mathTokens.push(`$${math.trim()}$`);
             return token;
         });
 
-
-        // 3. 줄바꿈 태그(<br>, <br/>) 보호 및 \r\n 중복 폭증 원천 차단
+        // 3. 줄바꿈 정제: \r\n -> <br>
         text = text.replace(/<br\s*\/?>\s*\r?\n/gi, '<br>');
         text = text.replace(/\r?\n\s*<br\s*\/?>/gi, '<br>');
         text = text.replace(/\r?\n/g, '<br>');
-        // 3개 이상 연속된 <br>은 최대 2개(<br><br> = 빈 줄 1개)로 정규화
         text = text.replace(/(?:<br\s*\/?>){3,}/gi, '<br><br>');
 
-        const BR_TOKEN = '___SAFE_BR_TOKEN___';
-        text = text.replace(/<br\s*\/?>/gi, BR_TOKEN);
-
-        // 4. 일반 텍스트 내의 특수문자(<, >, &)를 안전하게 HTML 엔티티로 변환
-        // (브라우저가 '<'를 HTML 태그 시작으로 오인하여 삼켜버리거나 태그를 왜곡하는 문제 원천 차단)
-        text = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        // 5. 텍스트 서식 명령어 (\textbf{}, \textit{}, \underline{})를 HTML 태그로 변환
+        // 4. 서식 명령어 변환
         text = replaceTextCommand(text, 'textbf', '<b>', '</b>');
         text = replaceTextCommand(text, 'textit', '<i>', '</i>');
         text = replaceTextCommand(text, 'underline', '<u>', '</u>');
 
-        // 6. 목록 환경 (\begin{itemize})을 글머리 기호 flex 블록으로 변환
+        // 5. \end{itemize} 바로 뒤에 붙은 인라인 텍스트 분리 (<br> 삽입하여 다음 문단으로 정상 파싱)
+        text = text.replace(/\\end\{itemize\}([^\s<])/gi, '\\end{itemize}<br>$1');
+
+        // 6. \begin{itemize} ... \end{itemize} 블록 변환
         const itemizeRegex = /\\begin\{itemize\}(?:\s*\[([^\]]*)\])?([\s\S]*?)\\end\{itemize\}/gi;
         let itemizePass = 0;
         while (itemizeRegex.test(text) && itemizePass < 10) {
             itemizePass++;
             text = text.replace(itemizeRegex, (_, optionsStr, body) => {
-                return parseItemizeBodyToHtml(body, BR_TOKEN, optionsStr);
+                return `___ITEMIZE_START___${parseItemizeBodyToCleanHtml(body, optionsStr)}___ITEMIZE_END___`;
             });
         }
 
-        // 7. BR_TOKEN으로 나눈 줄들을 문단 블록(<p> 또는 .bullet-item)으로 포장
+        // 7. <br>로 분할하여 문단 블록 구성
+        const BR_TOKEN = '___SAFE_BR_TOKEN___';
+        text = text.replace(/<br\s*\/?>/gi, BR_TOKEN);
+
+        // itemize 블록 경계의 불필요한 줄바꿈 토큰 흡수 (이중 빈 줄 원천 차단)
+        text = text.replace(new RegExp(`${BR_TOKEN}___ITEMIZE_START___`, 'g'), '___ITEMIZE_START___');
+        text = text.replace(new RegExp(`___ITEMIZE_END___${BR_TOKEN}`, 'g'), '___ITEMIZE_END___');
+
         const rawLines = text.split(BR_TOKEN);
         const blockHtmlList = [];
 
         rawLines.forEach(line => {
             let trimmed = line.trim();
             if (!trimmed) {
-                // 빈 줄: 브라우저가 높이를 렌더링하고 커서가 깜빡일 수 있도록 <br>이 포함된 <p>
                 blockHtmlList.push('<p><br></p>');
-            } else if (trimmed.startsWith('<div class="bullet-item"')) {
-                // 이미 글머리 기호 블록인 경우 그대로 추가
-                blockHtmlList.push(trimmed);
-            } else {
-                let align = '';
-                let padding = '';
-                let content = trimmed;
+                return;
+            }
 
-                // 1. 외곽 정렬 환경 검사 (\begin{center}, \begin{flushright})
-                const centerMatch = content.match(/^\\begin\{center\}([\s\S]*?)\\end\{center\}$/i);
-                const rightMatch = content.match(/^\\begin\{flushright\}([\s\S]*?)\\end\{flushright\}$/i);
-
-                if (centerMatch) {
-                    align = 'center';
-                    content = centerMatch[1].trim();
-                } else if (rightMatch) {
-                    align = 'right';
-                    content = rightMatch[1].trim();
+            if (trimmed.includes('___ITEMIZE_START___')) {
+                const parts = trimmed.split('___ITEMIZE_START___');
+                if (parts[0].trim()) {
+                    blockHtmlList.push(wrapInParagraph(parts[0].trim()));
                 }
-
-                // 2. 들여쓰기 환경 검사 (\begin{leftskip}[len], \begin{tab}[len])
-                const leftskipMatch = content.match(/^\\begin\{(?:leftskip|tab)\}(?:\s*\[([^\]]*)\])?([\s\S]*?)\\end\{(?:leftskip|tab)\}$/i);
-                if (leftskipMatch) {
-                    let pad = (leftskipMatch[1] || '1em').trim();
-                    if (/^[0-9.]+$/.test(pad)) pad += 'em';
-                    padding = pad;
-                    content = leftskipMatch[2].trim();
+                const itemizeRest = parts[1].split('___ITEMIZE_END___');
+                blockHtmlList.push(itemizeRest[0]);
+                if (itemizeRest[1] && itemizeRest[1].trim()) {
+                    blockHtmlList.push(wrapInParagraph(itemizeRest[1].trim()));
                 }
+                return;
+            }
 
-                // 3. 만약 leftskip 안에 center/flushright가 중첩된 경우 처리
-                if (!align) {
-                    const innerCenter = content.match(/^\\begin\{center\}([\s\S]*?)\\end\{center\}$/i);
-                    const innerRight = content.match(/^\\begin\{flushright\}([\s\S]*?)\\end\{flushright\}$/i);
-                    if (innerCenter) {
-                        align = 'center';
-                        content = innerCenter[1].trim();
-                    } else if (innerRight) {
-                        align = 'right';
-                        content = innerRight[1].trim();
-                    }
-                }
+            blockHtmlList.push(wrapInParagraph(trimmed));
+        });
 
-                let margin = '';
-                // \vspace{...} 검사
-                const vspaceMatch = content.match(/\\vspace\{([+-]?[0-9.]+(?:em|px)?)\}/i);
-                if (vspaceMatch) {
-                    let m = vspaceMatch[1].trim();
+        function wrapInParagraph(content) {
+            let align = '';
+            let padding = '';
+            let margin = '';
+
+            // 외곽 정렬 환경 검사 (\begin{center}, \begin{flushright})
+            const centerMatch = content.match(/^\\begin\{center\}([\s\S]*?)\\end\{center\}$/i);
+            const rightMatch = content.match(/^\\begin\{flushright\}([\s\S]*?)\\end\{flushright\}$/i);
+            if (centerMatch) {
+                align = 'center';
+                content = centerMatch[1].trim();
+            } else if (rightMatch) {
+                align = 'right';
+                content = rightMatch[1].trim();
+            }
+
+            // 들여쓰기 환경 검사 (\begin{leftskip}[len], \begin{tab}[len])
+            const leftskipMatch = content.match(/^\\begin\{(?:leftskip|tab)\}(?:\s*\[([^\]]*)\])?([\s\S]*?)\\end\{(?:leftskip|tab)\}$/i);
+            if (leftskipMatch) {
+                let pad = (leftskipMatch[1] || '1em').trim();
+                if (/^[0-9.]+$/.test(pad)) pad += 'em';
+                padding = pad;
+                content = leftskipMatch[2].trim();
+            }
+
+            // \vspace{...} 검사
+            const vspaceMatch = content.match(/\\vspace\{([+-]?[0-9.]+(?:em|px)?)\}/i);
+            if (vspaceMatch) {
+                let m = vspaceMatch[1].trim();
+                if (/^[+-]?[0-9.]+$/.test(m)) m += 'em';
+                margin = m;
+                content = content.replace(/\\vspace\{[+-]?[0-9.]+(?:em|px)?\}/i, '').trim();
+            }
+
+            // \\[...em] 줄바꿈 간격 검사
+            const newlineSpacingMatch = content.match(/\\\\\[([+-]?[0-9.]+(?:em|px)?)\s*\]\s*$/i);
+            if (newlineSpacingMatch) {
+                if (!margin) {
+                    let m = newlineSpacingMatch[1].trim();
                     if (/^[+-]?[0-9.]+$/.test(m)) m += 'em';
                     margin = m;
-                    content = content.replace(/\\vspace\{[+-]?[0-9.]+(?:em|px)?\}/i, '').trim();
                 }
-
-                // \\[...em] 줄바꿈 간격이 끝에 있는 경우 검사
-                const newlineSpacingMatch = content.match(/\\\\\[([+-]?[0-9.]+(?:em|px)?)\s*\]\s*$/i);
-                if (newlineSpacingMatch) {
-                    if (!margin) {
-                        let m = newlineSpacingMatch[1].trim();
-                        if (/^[+-]?[0-9.]+$/.test(m)) m += 'em';
-                        margin = m;
-                    }
-                    content = content.replace(/\\\\\[[+-]?[0-9.]+(?:em|px)?\s*\]\s*$/i, '').trim();
-                }
-
-                let pContent = content.replace(/\\\\(?:\s*\[[^\]]*\])?/g, '<br>');
-                const styles = [];
-                if (align) styles.push(`text-align: ${align};`);
-                if (padding) styles.push(`padding-left: ${padding};`);
-                if (margin) styles.push(`margin-bottom: ${margin};`);
-                const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
-
-                blockHtmlList.push(`<p${styleAttr}>${pContent || '<br>'}</p>`);
+                content = content.replace(/\\\\\[[+-]?[0-9.]+(?:em|px)?\s*\]\s*$/i, '').trim();
             }
-        });
+
+            content = content.replace(/\\\\(?:\s*\[[^\]]*\])?/g, '<br>');
+
+            const styles = [];
+            if (align) styles.push(`text-align: ${align};`);
+            if (padding) styles.push(`padding-left: ${padding};`);
+            if (margin) styles.push(`margin-bottom: ${margin};`);
+            const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
+
+            return `<p${styleAttr}>${content || '<br>'}</p>`;
+        }
 
         let resultHtml = blockHtmlList.length > 0 ? blockHtmlList.join('') : '<p><br></p>';
 
-        // 8. 마스킹했던 KaTeX 수식 HTML 스팬 및 TikZ 그래프 복원
-        mathTokens.forEach((renderedHtml, idx) => {
-            const token = `___MATH_TOKEN_${idx}___`;
-            resultHtml = resultHtml.split(token).join(renderedHtml);
-        });
-        tikzTokens.forEach((renderedHtml, idx) => {
-            const token = `___TIKZ_TOKEN_${idx}___`;
-            resultHtml = resultHtml.split(token).join(renderedHtml);
+        // 마스킹했던 수식 복원
+        mathTokens.forEach((m, idx) => {
+            resultHtml = resultHtml.split(`___MATH_TOKEN_${idx}___`).join(m);
         });
 
         return resultHtml;
     }
 
-    function parseItemizeBodyToHtml(body, brToken, optionsStr = '') {
+    function parseItemizeBodyToCleanHtml(body, optionsStr = '') {
         const itemRegex = /\\item(?![a-zA-Z])/g;
         const itemIndices = [];
         let match;
@@ -957,6 +974,7 @@
         }
 
         let leadContent = body.substring(0, itemIndices[0]).trim();
+        leadContent = leadContent.replace(/^(?:<br\s*\/?>)+|(?:<br\s*\/?>)+$/gi, '').trim();
         let result = leadContent ? `<p>${leadContent}</p>` : '';
 
         for (let k = 0; k < itemIndices.length; k++) {
@@ -995,12 +1013,7 @@
             }
 
             let itemContent = body.substring(cursor, nextStartIdx).trim();
-            while (itemContent.startsWith(brToken)) {
-                itemContent = itemContent.substring(brToken.length).trim();
-            }
-            while (itemContent.endsWith(brToken)) {
-                itemContent = itemContent.substring(0, itemContent.length - brToken.length).trim();
-            }
+            itemContent = itemContent.replace(/^(?:<br\s*\/?>)+|(?:<br\s*\/?>)+$/gi, '').trim();
 
             // \vspace{...} 검사
             const itemVspaceMatch = itemContent.match(/\\vspace\{([+-]?[0-9.]+(?:em|px)?)\}/i);
@@ -1013,10 +1026,8 @@
                 itemContent = itemContent.replace(/\\vspace\{[+-]?[0-9.]+(?:em|px)?\}/i, '').trim();
             }
 
-            // soft break (\\) 변환 및 잔여 brToken 처리
             itemContent = itemContent.replace(/\\\\(?:\s*\[[^\]]*\])?/g, '<br>');
-            itemContent = itemContent.split(brToken).join('<br>');
-
+            itemContent = itemContent.replace(/^(?:<br\s*\/?>)+|(?:<br\s*\/?>)+$/gi, '').trim();
             if (!itemContent) itemContent = '<br>';
 
             const finalLeft = itemLeft || defaultLeft;
@@ -1031,23 +1042,10 @@
         return result;
     }
 
-    function cleanHtmlLineBreaks(html) {
-        if (!html) return '';
-        return html
-            .replace(/<div><br\s*\/?>/gi, '<br>')
-            .replace(/<div>/gi, '<br>')
-            .replace(/<\/div>/gi, '')
-            .replace(/<p><br\s*\/?>/gi, '<br>')
-            .replace(/<p>/gi, '<br>')
-            .replace(/<\/p>/gi, '')
-            .replace(/\r?\n/g, '<br>')
-            .replace(/&nbsp;|\u00a0/g, ' ');
-    }
-
     function serializeHtmlToText(textEl) {
         if (!textEl) return '';
 
-        function nodeToText(node) {
+        function serializeInline(node) {
             if (node.nodeType === Node.TEXT_NODE) {
                 return (node.nodeValue || '').replace(/\r?\n/g, ' ');
             }
@@ -1058,7 +1056,7 @@
             const tag = node.tagName.toLowerCase();
 
             if (tag === 'br') {
-                return '\\\\';
+                return '<br>';
             }
 
             if (node.classList && node.classList.contains('inline-math')) {
@@ -1071,56 +1069,29 @@
                 return tikz ? `\\begin{tikzpicture}\n${tikz}\n\\end{tikzpicture}` : '';
             }
 
-            let inner = '';
-            for (let child of node.childNodes) {
-                inner += nodeToText(child);
+            // KaTeX 내부 렌더링 스팬이 실수로 섞여 들어간 경우 무시
+            if (node.classList && (node.classList.contains('katex') || node.classList.contains('katex-html'))) {
+                return '';
             }
 
-            if (!inner) return '';
+            let inner = '';
+            for (let child of node.childNodes) {
+                inner += serializeInline(child);
+            }
 
             const isBold = tag === 'b' || tag === 'strong' || (node.style && (node.style.fontWeight === 'bold' || parseInt(node.style.fontWeight) >= 600));
             const isItalic = tag === 'i' || tag === 'em' || (node.style && node.style.fontStyle === 'italic');
             const isUnderline = tag === 'u' || (node.style && node.style.textDecoration && node.style.textDecoration.includes('underline'));
 
             let formatted = inner;
-            if (isUnderline) {
-                formatted = `\\underline{${formatted}}`;
-            }
-            if (isItalic) {
-                formatted = `\\textit{${formatted}}`;
-            }
-            if (isBold) {
-                formatted = `\\textbf{${formatted}}`;
-            }
+            if (isUnderline) formatted = `<u>${formatted}</u>`;
+            if (isItalic) formatted = `<i>${formatted}</i>`;
+            if (isBold) formatted = `<b>${formatted}</b>`;
 
             return formatted;
         }
 
-        function blockToText(blockNode) {
-            if (!blockNode) return '';
-            const textContent = (blockNode.textContent || '').trim();
-            const hasMath = !!(blockNode.querySelector && blockNode.querySelector('.inline-math, .inline-graph'));
-            if (!textContent && !hasMath) return '';
-
-            const children = Array.from(blockNode.childNodes);
-            let endIdx = children.length - 1;
-            while (endIdx >= 0) {
-                const last = children[endIdx];
-                if (last.nodeType === Node.ELEMENT_NODE && last.tagName.toLowerCase() === 'br') {
-                    endIdx--;
-                } else {
-                    break;
-                }
-            }
-
-            let result = '';
-            for (let i = 0; i <= endIdx; i++) {
-                result += nodeToText(children[i]);
-            }
-            return result.trim();
-        }
-
-        const lines = [];
+        const blocks = [];
 
         for (let child of Array.from(textEl.childNodes)) {
             if (child.nodeType === Node.ELEMENT_NODE) {
@@ -1130,82 +1101,80 @@
                     const align = child.style.textAlign || '';
                     const padding = child.style.paddingLeft || '';
                     const margin = child.style.marginBottom || '';
-                    const inner = blockToText(child);
 
-                    // 빈 p인 경우 (내용이 없거나 오직 <br>만 있음) -> 빈 줄
-                    if (!inner) {
-                        lines.push('');
+                    const styles = [];
+                    if (align) styles.push(`text-align: ${align};`);
+                    if (padding) styles.push(`padding-left: ${padding};`);
+                    if (margin) styles.push(`margin-bottom: ${margin};`);
+                    const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
+
+                    let inner = '';
+                    for (let c of child.childNodes) {
+                        inner += serializeInline(c);
+                    }
+                    inner = inner.trim();
+                    if (!inner || inner === '<br>') {
+                        blocks.push('<p><br></p>');
                     } else {
-                        let pText = inner;
-                        if (padding) {
-                            pText = `\\begin{leftskip}[${padding}]${pText}\\end{leftskip}`;
-                        }
-                        if (margin) {
-                            pText = `${pText} \\vspace{${margin}}`;
-                        }
-                        if (align === 'center') {
-                            lines.push(`\\begin{center}${pText}\\end{center}`);
-                        } else if (align === 'right') {
-                            lines.push(`\\begin{flushright}${pText}\\end{flushright}`);
-                        } else {
-                            lines.push(pText);
-                        }
+                        blocks.push(`<p${styleAttr}>${inner}</p>`);
                     }
                 } else if (child.classList && child.classList.contains('bullet-item')) {
                     const markerEl = child.querySelector('.bullet-marker');
                     const marker = markerEl ? (markerEl.textContent || '').trim() : '•';
                     const contentEl = child.querySelector('.bullet-content');
-                    const innerContent = blockToText(contentEl);
-                    const labelPart = (marker && marker !== '•') ? `[${marker}]` : '';
-                    const padding = child.style.paddingLeft ? `[left=${child.style.paddingLeft}]` : '';
-                    const margin = child.style.marginBottom ? `[margin=${child.style.marginBottom}]` : '';
-                    lines.push(`___BULLET_ITEM_START___\\item${labelPart}${padding}${margin} ${innerContent}___BULLET_ITEM_END___`);
+
+                    let innerContent = '';
+                    if (contentEl) {
+                        for (let c of contentEl.childNodes) {
+                            innerContent += serializeInline(c);
+                        }
+                    }
+                    innerContent = innerContent.trim() || '<br>';
+
+                    const padding = child.style.paddingLeft || '';
+                    const margin = child.style.marginBottom || '';
+                    const styles = [];
+                    if (padding) styles.push(`padding-left: ${padding};`);
+                    if (margin) styles.push(`margin-bottom: ${margin};`);
+                    const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
+
+                    blocks.push(`<div class="bullet-item"${styleAttr}><span class="bullet-marker" contenteditable="false">${escapeHtmlAttr(marker)}</span><div class="bullet-content">${innerContent}</div></div>`);
                 } else if (tag === 'br') {
-                    lines.push('');
+                    blocks.push('<p><br></p>');
                 } else {
-                    let inlineText = nodeToText(child).trim();
-                    if (inlineText) lines.push(inlineText);
+                    const inline = serializeInline(child).trim();
+                    if (inline) blocks.push(`<p>${inline}</p>`);
                 }
             } else if (child.nodeType === Node.TEXT_NODE) {
                 const val = (child.nodeValue || '').trim();
-                if (val) lines.push(val);
+                if (val) blocks.push(`<p>${val}</p>`);
             }
         }
 
-        // 연속된 빈 줄이 무한정 증식하지 않도록 최대 1개(=<br><br>)까지만 허용
-        const cleanedLines = [];
-        let prevEmpty = false;
-        for (let l of lines) {
-            const isEmpty = (l === '' || l === undefined || l === null);
-            if (isEmpty) {
-                if (!prevEmpty) {
-                    cleanedLines.push('');
-                    prevEmpty = true;
+        // 연속된 빈 문단(<p><br></p>)이 2개 초과로 증식하지 않도록 정리
+        const cleaned = [];
+        let emptyCount = 0;
+        for (let b of blocks) {
+            if (b === '<p><br></p>') {
+                emptyCount++;
+                if (emptyCount <= 2) {
+                    cleaned.push(b);
                 }
             } else {
-                cleanedLines.push(l);
-                prevEmpty = false;
+                emptyCount = 0;
+                cleaned.push(b);
             }
         }
 
-        let text = cleanedLines.join('<br>');
+        // 맨 앞과 맨 뒤의 불필요한 빈 문단 제거
+        while (cleaned.length > 0 && cleaned[0] === '<p><br></p>') {
+            cleaned.shift();
+        }
+        while (cleaned.length > 0 && cleaned[cleaned.length - 1] === '<p><br></p>') {
+            cleaned.pop();
+        }
 
-        // 연속된 bullet item들을 하나의 \begin{itemize} ... \end{itemize}로 완벽하게 그룹화
-        text = text.replace(/(?:___BULLET_ITEM_START___[\s\S]*?___BULLET_ITEM_END___(?:\s*<br\s*\/?>\s*)?)+/g, (match) => {
-            const rawItems = match
-                .split('___BULLET_ITEM_START___')
-                .join('')
-                .split('___BULLET_ITEM_END___')
-                .map(s => s.replace(/<br\s*\/?>/gi, '').trim())
-                .filter(s => s.length > 0);
-            return `\\begin{itemize}<br>${rawItems.join('<br>')}<br>\\end{itemize}`;
-        });
-
-        // 3개 이상 연속된 <br> 축소 및 텍스트 맨 앞/뒤 빈 줄 정제
-        text = text.replace(/(?:<br\s*\/?>){3,}/gi, '<br><br>');
-        text = text.replace(/^(?:<br\s*\/?>)+|(?:<br\s*\/?>)+$/gi, '');
-
-        return text;
+        return cleaned.join('');
     }
 
     // =========================================================================
@@ -3081,17 +3050,17 @@
 
             let text = '';
             if (marginVal > 0) {
-                text = `아래 여백: +${marginVal.toFixed(2)}em`;
+                text = `+${marginVal.toFixed(2)}em`;
             } else if (marginVal < 0) {
-                text = `아래 여백: ${marginVal.toFixed(2)}em`;
+                text = `${marginVal.toFixed(2)}em`;
             } else {
-                text = '아래 여백: 0em (기본)';
+                text = '0em';
             }
             tip.textContent = text;
 
             if (targetEl && targetEl.getBoundingClientRect) {
                 const rect = targetEl.getBoundingClientRect();
-                const tipWidth = 140;
+                const tipWidth = 70;
                 let left = rect.left + 8;
                 let top = rect.bottom + 6;
 
@@ -3113,7 +3082,7 @@
 
             this._marginTipTimer = setTimeout(() => {
                 tip.classList.remove('show');
-            }, 1200);
+            }, 500);
         }
 
         applyBottomMargin(delta) {
@@ -3872,7 +3841,7 @@
         }
 
         cleanHtmlLineBreaks(html) {
-            return cleanHtmlLineBreaks(html);
+            return html || '';
         }
 
         bindTextEvents(textEl, boxEl) {
