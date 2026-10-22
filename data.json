@@ -22,7 +22,7 @@
       "top": 94,
       "width": 36,
       "height": 21,
-      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\">$f \\colon A \\to B$에 대하여</div></div>"
+      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\">$f \\colon A \\to B$에 대하여<br>$\\exists f^{-1} \\colon B \\to A,\\;\\bigg\\{\\begin{aligned}& f^{-1 } \\circ f = \\mathrm{id}_{A} \\\\&f \\circ f^{-1} = \\mathrm{id}_{B}\\end{aligned}$<br></div></div>"
     }
   ],
   "lines": [
