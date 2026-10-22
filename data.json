@@ -13,8 +13,8 @@
       "left": 6,
       "top": 85,
       "width": 36,
-      "height": 8,
-      "contents": ""
+      "height": 7,
+      "contents": "<p style=\"margin-bottom: 0.5em;\">Category $\\mathcal{C}$에 대하여</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\mathrm{Ob}(\\mathcal{C}^{\\mathrm{op}}) = \\mathrm{Ob}(\\mathcal{C}),\\qquad \\mathrm{Mor}_{\\mathcal{C}^{\\mathrm{op}}}(A,B) = \\mathrm{Mor}_{\\mathcal{C}}(B,A)$</p><p>으로 정의된 $\\mathcal{C}^{\\mathrm{op}}$를 <b>opposite category</b> of $\\mathcal{C}$라 한다.</p>"
     }
   ],
   "lines": [
