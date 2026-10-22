@@ -800,7 +800,19 @@
 
         .inline-math .katex {
             font-size: 1.08em;
-            line-height: 1.1;
+        }
+
+        /* KaTeX 디스플레이 수식(\[...\], $$...$$) 위아래 여백 조정 */
+        .katex-display {
+            margin: 0.5em 0 !important;
+        }
+
+        /* aligned, gathered 환경 (array 제외): 수식 내부 표(.mtable)를 아래로 내려 괄호(\bigg\{ 등)와 수직 중심 완벽 일치 */
+        .katex-display.katex-multiline-env .mtable,
+        .katex.katex-multiline-env .mtable,
+        .katex .mtable:not(:has(.arraycolsep)) {
+            position: relative;
+            top: 0.2em;
         }
 
         /* 텍스트 편집 모드(.box.is-editing)일 때만 수식 hover 및 포인터 커서 활성화 */
@@ -1006,6 +1018,13 @@
             line-height: inherit;
             word-break: break-word;
             outline: none;
+        }
+
+        .bullet-content > p {
+            margin: 0;
+            padding: 0;
+            line-height: inherit;
+            min-height: 1em;
         }
 
         .marker-mini-bubble {

@@ -117,6 +117,13 @@
                     throwOnError: false,
                     trust: true
                 });
+
+                // aligned 및 gathered 환경 식별 (array 제외하여 수직 중심 보정 클래스 부여)
+                const hasAlignedOrGathered = /\\begin\{(?:aligned|gathered)\}/.test(expr);
+                const hasArray = /\\begin\{array\}/.test(expr);
+                if (hasAlignedOrGathered && !hasArray) {
+                    result = result.replace(/class="([^"]*katex[^"]*)"/, 'class="$1 katex-multiline-env"');
+                }
             } catch (e) {
                 console.error('KaTeX render error:', e);
                 result = escapeHtmlAttr(latex);
@@ -1036,6 +1043,10 @@
             if (itemMargin) itemStyles.push(`margin-bottom: ${itemMargin};`);
             const styleAttr = itemStyles.length > 0 ? ` style="${itemStyles.join(' ')}"` : '';
 
+            if (!/<p\b/i.test(itemContent)) {
+                itemContent = `<p>${itemContent}</p>`;
+            }
+
             const itemBlock = `<div class="bullet-item"${styleAttr}><span class="bullet-marker" contenteditable="false">${escapeHtmlAttr(customLabel)}</span><div class="bullet-content">${itemContent}</div></div>`;
             result += itemBlock;
         }
@@ -1125,11 +1136,34 @@
 
                     let innerContent = '';
                     if (contentEl) {
-                        for (let c of contentEl.childNodes) {
-                            innerContent += serializeInline(c);
+                        const childPs = Array.from(contentEl.children).filter(c => c.tagName === 'P');
+                        if (childPs.length > 0) {
+                            innerContent = childPs.map(p => {
+                                const align = p.style.textAlign || '';
+                                const styles = [];
+                                if (align) styles.push(`text-align: ${align};`);
+                                if (p.style.marginBottom) styles.push(`margin-bottom: ${p.style.marginBottom};`);
+                                const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
+
+                                let pText = '';
+                                for (let c of p.childNodes) {
+                                    pText += serializeInline(c);
+                                }
+                                pText = pText.trim();
+                                if (!pText || pText === '<br>') return '<p><br></p>';
+                                return `<p${styleAttr}>${pText}</p>`;
+                            }).join('');
+                        } else {
+                            for (let c of contentEl.childNodes) {
+                                innerContent += serializeInline(c);
+                            }
+                            innerContent = innerContent.trim() || '<br>';
+                            if (!/<p\b/i.test(innerContent)) {
+                                innerContent = `<p>${innerContent}</p>`;
+                            }
                         }
                     }
-                    innerContent = innerContent.trim() || '<br>';
+                    if (!innerContent) innerContent = '<p><br></p>';
 
                     const padding = child.style.paddingLeft || '';
                     const margin = child.style.marginBottom || '';
@@ -2678,7 +2712,7 @@
             this.activeMarkerTarget = null;
         }
 
-        createBulletItemElement(marker = '•', contentHtml = '<br>') {
+        createBulletItemElement(marker = '•', contentHtml = '<p><br></p>') {
             const item = document.createElement('div');
             item.className = 'bullet-item';
 
@@ -2696,7 +2730,11 @@
 
             const contentEl = document.createElement('div');
             contentEl.className = 'bullet-content';
-            contentEl.innerHTML = contentHtml || '<br>';
+            let html = contentHtml || '<p><br></p>';
+            if (!/<p\b/i.test(html)) {
+                html = `<p>${html}</p>`;
+            }
+            contentEl.innerHTML = html;
 
             item.appendChild(markerEl);
             item.appendChild(contentEl);
@@ -2754,89 +2792,127 @@
                 range = this.savedSelectionRange;
             }
 
-            const newBullet = this.createBulletItemElement('•', '<br>');
-            const contentEl = newBullet.querySelector('.bullet-content');
-
             if (!range) {
+                const newBullet = this.createBulletItemElement('•', '<p><br></p>');
                 textEl.appendChild(newBullet);
-            } else {
-                let targetBlock = range.startContainer;
-                while (targetBlock && targetBlock.parentNode !== textEl) {
-                    targetBlock = targetBlock.parentNode;
+                this.focusBlock(newBullet.querySelector('.bullet-content p') || newBullet.querySelector('.bullet-content'), true);
+                return;
+            }
+
+            // 현재 커서가 bullet-content 내부인지 검사
+            let node = range.startContainer;
+            if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+            const currentBullet = node?.closest?.('.bullet-item');
+
+            if (currentBullet && textEl.contains(currentBullet)) {
+                // [요구사항]: 글머리 기호 안에서 글머리 기호 추가 시 -> 하위(들여쓰기된) 글머리 기호 생성
+                const contentEl = currentBullet.querySelector('.bullet-content');
+                let currentP = node?.closest?.('p');
+                if (currentP && !contentEl.contains(currentP)) currentP = null;
+
+                // 계층형 서브 마커 자동 선택: • -> ◦ -> ▪ -> -
+                let parentMarker = currentBullet.querySelector('.bullet-marker')?.textContent?.trim() || '•';
+                let subMarker = '◦';
+                if (parentMarker === '◦') subMarker = '▪';
+                else if (parentMarker === '▪') subMarker = '-';
+                else if (/^\d+\./.test(parentMarker)) subMarker = '(1)';
+
+                const newSubBullet = this.createBulletItemElement(subMarker, '<p><br></p>');
+
+                if (currentP) {
+                    const isPEmpty = (!currentP.textContent || currentP.textContent.trim() === '') && !currentP.querySelector('.inline-math, .inline-graph');
+                    if (isPEmpty) {
+                        // 빈 문단이면 바로 그 자리에 하위 글머리 기호 생성
+                        currentP.replaceWith(newSubBullet);
+                    } else {
+                        // 내용이 있는 문단이면 다음 문단 자리에 생성
+                        currentP.after(newSubBullet);
+                    }
+                } else {
+                    currentBullet.after(newSubBullet);
                 }
 
-                if (targetBlock) {
-                    if (targetBlock.style.paddingLeft) {
-                        newBullet.style.paddingLeft = targetBlock.style.paddingLeft;
-                    }
-                    if (targetBlock.classList && targetBlock.classList.contains('bullet-item')) {
-                        targetBlock.after(newBullet);
-                    } else if (targetBlock.tagName === 'P') {
-                        // 만약 현재 p가 비어있다면 p를 bullet-item으로 교체
-                        const isEmpty = (!targetBlock.textContent || targetBlock.textContent === '') && !targetBlock.querySelector('.inline-math, .inline-graph');
-                        if (isEmpty) {
-                            targetBlock.replaceWith(newBullet);
-                        } else {
-                            targetBlock.after(newBullet);
-                        }
+                const targetFocus = newSubBullet.querySelector('.bullet-content p') || newSubBullet.querySelector('.bullet-content');
+                this.focusBlock(targetFocus, true);
+                return;
+            }
+
+            // 글머리 기호 바깥(일반 문단)인 경우
+            let targetBlock = range.startContainer;
+            while (targetBlock && targetBlock.parentNode !== textEl) {
+                targetBlock = targetBlock.parentNode;
+            }
+
+            const newBullet = this.createBulletItemElement('•', '<p><br></p>');
+            if (targetBlock) {
+                if (targetBlock.style.paddingLeft) {
+                    newBullet.style.paddingLeft = targetBlock.style.paddingLeft;
+                }
+                if (targetBlock.tagName === 'P') {
+                    const isEmpty = (!targetBlock.textContent || targetBlock.textContent.trim() === '') && !targetBlock.querySelector('.inline-math, .inline-graph');
+                    if (isEmpty) {
+                        targetBlock.replaceWith(newBullet);
                     } else {
                         targetBlock.after(newBullet);
                     }
                 } else {
-                    textEl.appendChild(newBullet);
+                    targetBlock.after(newBullet);
                 }
+            } else {
+                textEl.appendChild(newBullet);
             }
 
-            this.focusBlock(contentEl, true);
+            const targetFocus = newBullet.querySelector('.bullet-content p') || newBullet.querySelector('.bullet-content');
+            this.focusBlock(targetFocus, true);
         }
 
         handleBulletEnter(currentBullet) {
             const contentEl = currentBullet.querySelector('.bullet-content');
             if (!contentEl) return;
 
-            // 내용이 비어있는 글머리 기호에서 엔터를 누르면 일반 문단(<p><br></p>)으로 전환
-            const isEmpty = (!contentEl.textContent || contentEl.textContent.trim() === '') && !contentEl.querySelector('.inline-math, .inline-graph');
-            if (isEmpty) {
-                this.removeBulletItem(currentBullet);
-                return;
-            }
-
             const sel = window.getSelection();
-            const newBullet = this.createBulletItemElement('•', '<br>');
-            if (currentBullet.style.paddingLeft) {
-                newBullet.style.paddingLeft = currentBullet.style.paddingLeft;
-            }
-            const newContent = newBullet.querySelector('.bullet-content');
-
-            if (!sel || !sel.rangeCount) {
-                currentBullet.after(newBullet);
-                this.focusBlock(newContent, true);
-                return;
-            }
-
+            if (!sel || !sel.rangeCount) return;
             const range = sel.getRangeAt(0);
 
-            if (contentEl.contains(range.startContainer)) {
+            // [요구사항 1]: 글머리 기호 안에서 엔터 시 같은 bullet-content 안에 새 문단(<p>) 생성
+            let node = range.startContainer;
+            if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+            let currentP = node?.closest?.('p');
+
+            // 만약 contentEl 안에 <p>가 없는 구형 구조라면 전체를 <p>로 먼저 감싸서 정규화
+            if (!currentP || !contentEl.contains(currentP)) {
+                const p = document.createElement('p');
+                while (contentEl.firstChild) {
+                    p.appendChild(contentEl.firstChild);
+                }
+                if (!p.childNodes.length) p.innerHTML = '<br>';
+                contentEl.appendChild(p);
+                currentP = p;
+            }
+
+            // 현재 <p> 안에서 캐럿 위치를 기준으로 내용 분할
+            const newP = document.createElement('p');
+
+            if (currentP.contains(range.startContainer)) {
                 const splitRange = range.cloneRange();
-                splitRange.setEnd(contentEl, contentEl.childNodes.length);
+                splitRange.setEnd(currentP, currentP.childNodes.length);
                 const extractedFrag = splitRange.extractContents();
 
                 if (extractedFrag && (extractedFrag.textContent !== '' || (extractedFrag.querySelector && extractedFrag.querySelector('.inline-math, .inline-graph')))) {
-                    newContent.innerHTML = '';
-                    newContent.appendChild(extractedFrag);
+                    newP.appendChild(extractedFrag);
                 } else {
-                    newContent.innerHTML = '<br>';
+                    newP.innerHTML = '<br>';
                 }
 
-                if (!contentEl.childNodes.length || contentEl.innerHTML.trim() === '') {
-                    contentEl.innerHTML = '<br>';
+                if (!currentP.childNodes.length || currentP.innerHTML.trim() === '') {
+                    currentP.innerHTML = '<br>';
                 }
             } else {
-                newContent.innerHTML = '<br>';
+                newP.innerHTML = '<br>';
             }
 
-            currentBullet.after(newBullet);
-            this.focusBlock(newContent, true);
+            currentP.after(newP);
+            this.focusBlock(newP, true);
         }
 
         removeBulletItem(currentBullet) {
@@ -2844,21 +2920,34 @@
             const textEl = this.activeBox?.querySelector('.box-text');
             if (!textEl || !contentEl) return;
 
-            const p = document.createElement('p');
-            if (currentBullet.style.paddingLeft) {
-                p.style.paddingLeft = currentBullet.style.paddingLeft;
-            }
+            const pList = Array.from(contentEl.children).filter(c => c.tagName === 'P');
 
-            while (contentEl.firstChild) {
-                p.appendChild(contentEl.firstChild);
+            if (pList.length > 0) {
+                let insertRef = currentBullet;
+                pList.forEach(p => {
+                    if (currentBullet.style.paddingLeft && !p.style.paddingLeft) {
+                        p.style.paddingLeft = currentBullet.style.paddingLeft;
+                    }
+                    insertRef.after(p);
+                    insertRef = p;
+                });
+                const firstP = pList[0];
+                currentBullet.remove();
+                this.focusBlock(firstP, true);
+            } else {
+                const p = document.createElement('p');
+                if (currentBullet.style.paddingLeft) {
+                    p.style.paddingLeft = currentBullet.style.paddingLeft;
+                }
+                while (contentEl.firstChild) {
+                    p.appendChild(contentEl.firstChild);
+                }
+                if (!p.childNodes.length || (p.textContent === '' && !p.querySelector('.inline-math, .inline-graph'))) {
+                    p.innerHTML = '<br>';
+                }
+                currentBullet.replaceWith(p);
+                this.focusBlock(p, true);
             }
-
-            if (!p.childNodes.length || (p.textContent === '' && !p.querySelector('.inline-math, .inline-graph'))) {
-                p.innerHTML = '<br>';
-            }
-
-            currentBullet.replaceWith(p);
-            this.focusBlock(p, true);
         }
 
         applyFormat(formatType) {
@@ -2928,7 +3017,17 @@
             }
 
             targetBlocks.forEach(block => {
-                const target = block.classList.contains('bullet-item') ? block.querySelector('.bullet-content') : block;
+                let target = block;
+                if (block.classList.contains('bullet-item')) {
+                    let node = range.startContainer;
+                    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+                    const pInBullet = node?.closest?.('p');
+                    if (pInBullet && block.contains(pInBullet)) {
+                        target = pInBullet;
+                    } else {
+                        target = block.querySelector('.bullet-content') || block;
+                    }
+                }
                 if (!target) return;
 
                 if (alignType === 'left') {
@@ -3701,12 +3800,61 @@
             const currentBlock = this.getCurrentBlock(textEl);
             if (!currentBlock) return;
 
-            if (currentBlock.classList.contains('bullet-item')) {
-                const contentEl = currentBlock.querySelector('.bullet-content');
-                if (contentEl && this.isCaretAtStart(contentEl)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.removeBulletItem(currentBlock);
+            // 글머리 기호 내부인지 확인
+            let bulletNode = range.startContainer;
+            if (bulletNode.nodeType === Node.TEXT_NODE) bulletNode = bulletNode.parentNode;
+            const currentBullet = currentBlock.classList.contains('bullet-item') ? 
+                currentBlock : (currentBlock.closest?.('.bullet-item') || bulletNode?.closest?.('.bullet-item'));
+
+            if (currentBullet && textEl.contains(currentBullet)) {
+                const contentEl = currentBullet.querySelector('.bullet-content');
+                if (contentEl) {
+                    let currentP = bulletNode?.closest?.('p');
+                    if (currentP && !contentEl.contains(currentP)) currentP = null;
+
+                    const firstP = contentEl.querySelector('p') || contentEl.firstElementChild;
+                    const isFirstP = (!currentP || currentP === firstP);
+
+                    if (isFirstP) {
+                        // 첫 번째 <p>의 맨 앞에서 Backspace: 기존처럼 글머리 기호 전체 해제
+                        if (this.isCaretAtStart(currentP || contentEl)) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.removeBulletItem(currentBullet);
+                            return;
+                        }
+                    } else {
+                        // [사용자 요구사항]: 첫 번째가 아닌 <p>의 맨 앞에서 Backspace:
+                        // "그 문단부터 bullet-content 안의 마지막 문단까지 글머리 문단에서 빠져나와서 그냥 밖에 있는 <p>가 되는 거야."
+                        if (this.isCaretAtStart(currentP)) {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            // currentP부터 그 뒤의 모든 형제 노드들을 수집
+                            const movingNodes = [];
+                            let next = currentP;
+                            while (next) {
+                                const temp = next.nextSibling;
+                                movingNodes.push(next);
+                                next = temp;
+                            }
+
+                            // currentBullet 바로 뒤(바깥)로 순서대로 이동
+                            let insertRef = currentBullet;
+                            movingNodes.forEach(n => {
+                                insertRef.after(n);
+                                insertRef = n;
+                            });
+
+                            if (!contentEl.childNodes.length || contentEl.innerHTML.trim() === '') {
+                                contentEl.innerHTML = '<p><br></p>';
+                            }
+
+                            // 탈출한 currentP의 맨 앞에 포커스 유지 (여기서 한 번 더 백스페이스를 누르면 앞 블록과 병합됨)
+                            this.focusBlock(currentP, true);
+                            return;
+                        }
+                    }
                 }
                 return;
             }
