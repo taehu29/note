@@ -88,6 +88,16 @@
             .replace(/>/g, '&gt;');
     }
 
+    function unescapeHtmlEntities(str) {
+        if (!str) return '';
+        return str
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+    }
+
     function prepareLatexForRender(latex, isDisplay = false) {
         if (!latex) return '';
         if (isDisplay) return latex;
@@ -140,6 +150,9 @@
         return result;
     }
 
+    const tikzRenderCache = new Map();
+    const MAX_TIKZ_CACHE = 500;
+
     // =========================================================================
     // 2-B. TikZ 그래프 변환 유틸리티 (좌표 1 = 1em 고정 배율)
     // =========================================================================
@@ -161,7 +174,12 @@
             .replace(/&amp;/g, '&')
             .replace(/&nbsp;|\u00a0/g, ' ');
 
-        const svgId = 'tikz-' + Math.floor(Math.random() * 1000000);
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) {
+            hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+            hash |= 0;
+        }
+        const svgId = 'tikz-' + Math.abs(hash);
 
         const envMatch = raw.match(/\\begin\{tikzpicture\}\s*(\[[^\]]*\])?/);
         const envOptions = envMatch && envMatch[1] ? envMatch[1] : '';
@@ -605,9 +623,9 @@
 
                 const exprMatch = stmt.match(/plot\s*(?:\[[^\]]*\])?\s*\(\s*\\?x\s*,\s*\{?([^}]+)\}?\s*\)/i);
                 const rawExpr = exprMatch ? exprMatch[1].trim() : 'x^2';
-
-                function evalExpr(xVal, expr) {
-                    let jsExpr = expr
+                let compiledFn = null;
+                try {
+                    let jsExpr = rawExpr
                         .replace(/\\x/g, 'x')
                         .replace(/x\^3/g, 'Math.pow(x,3)')
                         .replace(/x\^2/g, 'Math.pow(x,2)')
@@ -620,12 +638,9 @@
                         .replace(/ln\(x\)/g, 'Math.log(x)');
 
                     jsExpr = jsExpr.replace(/(\d+)\s*x/g, '$1*x');
-
-                    try {
-                        return Function('x', 'return ' + jsExpr)(xVal);
-                    } catch (e) {
-                        return 0;
-                    }
+                    compiledFn = new Function('x', 'return ' + jsExpr);
+                } catch (e) {
+                    compiledFn = () => 0;
                 }
 
                 const samples = 100;
@@ -634,7 +649,12 @@
 
                 for (let i = 0; i <= samples; i++) {
                     const xVal = minDomain + i * step;
-                    const yVal = evalExpr(xVal, rawExpr);
+                    let yVal = 0;
+                    try {
+                        yVal = compiledFn(xVal);
+                    } catch (_) {
+                        yVal = 0;
+                    }
                     if (!isNaN(yVal) && isFinite(yVal)) {
                         const pt = parseCoord(`(${xVal}, ${yVal})`);
                         if (pt) plotPoints.push(pt);
@@ -708,9 +728,18 @@
 
     function renderTikzToHtml(tikz) {
         if (!tikz) return '';
-        const svg = convertTikzToSvg(tikz);
-        if (svg) return svg.trim();
-        return `<span class="graph-empty-placeholder">[그래프...]</span>`;
+        const cacheKey = tikz.trim();
+        if (tikzRenderCache.has(cacheKey)) {
+            return tikzRenderCache.get(cacheKey);
+        }
+        const svg = convertTikzToSvg(cacheKey);
+        const result = svg ? svg.trim() : `<span class="graph-empty-placeholder">[그래프...]</span>`;
+        if (tikzRenderCache.size >= MAX_TIKZ_CACHE) {
+            const firstKey = tikzRenderCache.keys().next().value;
+            tikzRenderCache.delete(firstKey);
+        }
+        tikzRenderCache.set(cacheKey, result);
+        return result;
     }
 
     function parseBalancedBlock(str, startIdx, openChar = '{', closeChar = '}') {
@@ -781,7 +810,7 @@
 
         // 2. TikZ 그래프 블록 (\begin{tikzpicture}...\end{tikzpicture}) 렌더링
         html = html.replace(/\\begin\{tikzpicture\}([\s\S]*?)\\end\{tikzpicture\}/gi, (match, body) => {
-            const cleanTikz = body.trim();
+            const cleanTikz = unescapeHtmlEntities(body).trim();
             const rendered = renderTikzToHtml(cleanTikz);
             return `<span class="inline-graph" data-tikz="${escapeHtmlAttr(cleanTikz)}" contenteditable="false">${rendered.trim()}</span>`;
         });
@@ -789,14 +818,14 @@
         // 3. 수식 블록 ($$...$$, \[...\], $...$) 렌더링
         // 디스플레이 수식 ($$...$$ 또는 \[...\])
         html = html.replace(/(?<!\\)(?:\$\$([\s\S]*?)(?<!\\)\$\$|\\\[([\s\S]*?)\\\])/g, (match, m1, m2) => {
-            const math = (m1 !== undefined ? m1 : m2).trim();
+            const math = unescapeHtmlEntities(m1 !== undefined ? m1 : m2).trim();
             const rendered = renderLatexToHtml(math, false);
             return `<span class="inline-math" data-latex="${escapeHtmlAttr(math)}" contenteditable="false">${rendered}</span>`;
         });
 
         // 인라인 수식 ($...$)
         html = html.replace(/(?<!\\)\$(?!\$)([\s\S]*?)(?<!\\)\$/g, (match, math) => {
-            const cleanMath = math.trim();
+            const cleanMath = unescapeHtmlEntities(math).trim();
             const rendered = renderLatexToHtml(cleanMath, false);
             return `<span class="inline-math" data-latex="${escapeHtmlAttr(cleanMath)}" contenteditable="false">${rendered}</span>`;
         });
@@ -1073,8 +1102,8 @@
         clone.querySelectorAll('.trailing-soft-br').forEach(el => el.remove());
         clone.querySelectorAll('.katex, .katex-html').forEach(el => el.remove());
 
-        // 4. DOM 구조와 스타일, 중첩 글머리 기호 전체를 100% 무손실로 반환
-        return clone.innerHTML.trim();
+        // 4. DOM 구조와 스타일, 중첩 글머리 기호 전체를 100% 무손실로 반환 (\u200B 제거)
+        return clone.innerHTML.replace(/\u200B/g, '').trim();
     }
 
     // =========================================================================
@@ -1247,8 +1276,10 @@
             if (!this.tooltipEl) return;
             this.tooltipEl.textContent = text;
 
-            const tooltipX = Math.min(window.innerWidth - 80, Math.max(10, x));
-            const tooltipY = Math.min(window.innerHeight - 40, Math.max(10, y));
+            const viewW = this.cachedViewWidth || window.innerWidth;
+            const viewH = this.cachedViewHeight || window.innerHeight;
+            const tooltipX = Math.min(viewW - 80, Math.max(10, x));
+            const tooltipY = Math.min(viewH - 40, Math.max(10, y));
 
             this.tooltipEl.style.transform = `translate(${tooltipX}px, ${tooltipY}px)`;
             this.tooltipEl.classList.add('show');
@@ -1295,15 +1326,17 @@
         }
 
         ensureGridSize(maxColEm, maxRowEm) {
-            const targetWidth = Math.max(CONFIG.DEFAULT_GRID_SIZE_EM, Math.ceil(maxColEm) + 2);
-            const targetHeight = Math.max(CONFIG.DEFAULT_GRID_SIZE_EM, Math.ceil(maxRowEm) + 2);
+            const CHUNK_SIZE = 50;
+            const targetWidth = Math.max(CONFIG.DEFAULT_GRID_SIZE_EM, Math.ceil((maxColEm + 2) / CHUNK_SIZE) * CHUNK_SIZE);
+            const targetHeight = Math.max(CONFIG.DEFAULT_GRID_SIZE_EM, Math.ceil((maxRowEm + 2) / CHUNK_SIZE) * CHUNK_SIZE);
 
-            if (targetWidth !== this.gridWidthEm || targetHeight !== this.gridHeightEm) {
-                this.gridWidthEm = targetWidth;
-                this.gridHeightEm = targetHeight;
-                this.gridEl.style.width = `${targetWidth}em`;
-                this.gridEl.style.height = `${targetHeight}em`;
-                this.updatePixelDimensions();
+            if (targetWidth > this.gridWidthEm || targetHeight > this.gridHeightEm) {
+                this.gridWidthEm = Math.max(this.gridWidthEm, targetWidth);
+                this.gridHeightEm = Math.max(this.gridHeightEm, targetHeight);
+                this.gridEl.style.width = `${this.gridWidthEm}em`;
+                this.gridEl.style.height = `${this.gridHeightEm}em`;
+                this.gridPixelWidth = this.gridWidthEm * this.cellSize;
+                this.gridPixelHeight = this.gridHeightEm * this.cellSize;
             }
         }
 
@@ -1630,12 +1663,20 @@
             this.deleteBtn = document.getElementById('delete-btn');
         }
 
-        updateUI() {
-            document.querySelectorAll('.box.selected, .line.selected').forEach(el => {
-                if (!this.selectedElements.has(el)) {
-                    el.classList.remove('selected');
-                }
-            });
+        updateUI(prevElements = null) {
+            if (prevElements) {
+                prevElements.forEach(el => {
+                    if (!this.selectedElements.has(el)) {
+                        el.classList.remove('selected');
+                    }
+                });
+            } else {
+                document.querySelectorAll('.box.selected, .line.selected').forEach(el => {
+                    if (!this.selectedElements.has(el)) {
+                        el.classList.remove('selected');
+                    }
+                });
+            }
 
             this.selectedElements.forEach(el => {
                 el.classList.add('selected');
@@ -1648,6 +1689,7 @@
         }
 
         select(el, isMulti = false) {
+            const prev = new Set(this.selectedElements);
             if (!el) {
                 this.clear();
                 return;
@@ -1662,20 +1704,22 @@
                 this.selectedElements.clear();
                 this.selectedElements.add(el);
             }
-            this.updateUI();
+            this.updateUI(prev);
         }
 
         setSelection(elementsSet) {
+            const prev = new Set(this.selectedElements);
             this.selectedElements.clear();
             if (elementsSet) {
                 elementsSet.forEach(el => this.selectedElements.add(el));
             }
-            this.updateUI();
+            this.updateUI(prev);
         }
 
         clear() {
+            const prev = new Set(this.selectedElements);
             this.selectedElements.clear();
-            this.updateUI();
+            this.updateUI(prev);
         }
 
         deleteSelected(store, historyManager = this.historyManager) {
@@ -1711,7 +1755,8 @@
                 let textContent = '';
                 if (item.type === 'box') {
                     if (item.element && item.element.classList.contains('is-editing')) {
-                        textContent = item.element.querySelector('.box-text')?.innerHTML || item.text || '';
+                        const textEl = item.element.querySelector('.box-text');
+                        textContent = textEl ? serializeHtmlToText(textEl) : (item.text || '');
                     } else {
                         textContent = item.text || '';
                     }
@@ -1791,6 +1836,8 @@
                     existing.top = item.top;
                     existing.width = item.width;
                     existing.height = item.height;
+
+                    const textChanged = (existing.text !== (item.text || ''));
                     existing.text = item.text || '';
 
                     const el = existing.element;
@@ -1805,7 +1852,7 @@
                         el.style.width = `${item.width}em`;
                         el.style.height = `${item.height}em`;
                         const textEl = el.querySelector('.box-text');
-                        if (textEl) {
+                        if (textEl && textChanged) {
                             textEl.innerHTML = parseMathToHtml(item.text || '');
                         }
                     } else if (item.type === 'line') {
@@ -1883,41 +1930,51 @@
             this.initMarkerBubbleEvents();
         }
 
+        // 문단(<p>)에 실제 텍스트나 수식/그래프가 있으면 내부의 더미 <br>을 모두 즉시 제거
+        cleanupDummyBrInParagraph(pEl) {
+            if (!pEl || pEl.tagName !== 'P') return;
+            const hasText = (pEl.textContent || '').replace(/\u200B/g, '').trim().length > 0;
+            const hasInlineObj = !!pEl.querySelector?.('.inline-math, .inline-graph');
+            if (hasText || hasInlineObj) {
+                pEl.querySelectorAll('br').forEach(br => br.remove());
+            } else {
+                const brs = pEl.querySelectorAll('br');
+                if (brs.length === 0) {
+                    pEl.innerHTML = '<br>';
+                } else if (brs.length > 1) {
+                    for (let i = 1; i < brs.length; i++) brs[i].remove();
+                }
+            }
+        }
+
         initMathBubbleEvents() {
             if (!this.mathBubbleEl) return;
 
-            // 버블 내부 클릭 시 캔버스 제스처(이동, 선택 등) 전파 차단
             this.mathBubbleEl.addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
             });
 
-            // 수식 입력 중 실시간 렌더링 및 버블 위치 실시간 추적
+            // 수식 입력 중 실시간 렌더링 (위치는 처음 열었을 때 고정)
             this.mathBubbleEl.addEventListener('input', () => {
                 if (!this.activeMathTarget) return;
-                const code = this.mathBubbleEl.textContent || '';
+                const code = (this.mathBubbleEl.innerText || this.mathBubbleEl.textContent || '').replace(/\u200B/g, '');
                 this.activeMathTarget.dataset.latex = code;
                 this.renderMathTarget(this.activeMathTarget);
-                this.positionMathBubble(this.activeMathTarget);
             });
 
-            // 키보드 내비게이션 및 탈출/확정 처리
             this.mathBubbleEl.addEventListener('keydown', (e) => {
                 if (!this.activeMathTarget) return;
 
-                // Enter: 수식 확정 및 다음 위치로 탈출
                 if (e.key === 'Enter') {
-                    if (e.shiftKey) {
-                        return; // Shift+Enter: 줄바꿈 허용
-                    }
+                    if (e.shiftKey) return;
                     e.preventDefault();
                     e.stopPropagation();
                     this.deactivateMathBubble(true, 'next');
                     return;
                 }
 
-                // Backspace: 수식이 완전히 비어있을 때 즉시 삭제 및 이전 텍스트로 탈출
                 if (e.key === 'Backspace') {
-                    const code = this.mathBubbleEl.textContent.trim();
+                    const code = (this.mathBubbleEl.textContent || '').replace(/\u200B/g, '').trim();
                     if (!code) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1926,7 +1983,6 @@
                     }
                 }
 
-                // ArrowRight / ArrowDown: 버블 텍스트 끝에 있을 때 오른쪽 텍스트로 탈출
                 if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                     if (this.isCaretAtEnd(this.mathBubbleEl)) {
                         e.preventDefault();
@@ -1936,7 +1992,6 @@
                     }
                 }
 
-                // ArrowLeft / ArrowUp: 버블 텍스트 맨 앞에 있을 때 왼쪽 텍스트로 탈출
                 if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
                     if (this.isCaretAtStart(this.mathBubbleEl)) {
                         e.preventDefault();
@@ -1946,16 +2001,14 @@
                     }
                 }
 
-                // Escape: 버블 닫기 (비어있으면 자동 삭제)
                 if (e.key === 'Escape') {
                     e.preventDefault();
                     e.stopPropagation();
-                    this.deactivateMathBubble(true, 'none');
+                    this.deactivateMathBubble(true, 'next');
                     return;
                 }
             });
 
-            // 순수 텍스트 붙여넣기 (서식 제거)
             this.mathBubbleEl.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const pasteText = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
@@ -1974,6 +2027,9 @@
             if (this.activeGraphTarget) {
                 this.deactivateGraphBubble(true, 'none');
             }
+            if (this.activeMarkerTarget) {
+                this.deactivateMarkerBubble(true);
+            }
 
             this.activeMathTarget = mathTarget;
 
@@ -1991,16 +2047,15 @@
             if (!this.mathBubbleEl || !mathTarget) return;
 
             const rect = mathTarget.getBoundingClientRect();
-            const textLen = (mathTarget.dataset.latex || '').length;
-            const bubbleWidth = Math.max(140, Math.min(520, Math.max(textLen * 9 + 40, 160)));
+            const bubbleWidth = 180;
 
             let left = rect.left + (rect.width / 2) - (bubbleWidth / 2);
-            let top = rect.top - 42; // 수식 위쪽
+            let top = rect.top - 42;
 
             this.mathBubbleEl.classList.remove('point-down');
 
             if (top < 10) {
-                top = rect.bottom + 8; // 상단 공간 부족 시 아래쪽 표시
+                top = rect.bottom + 8;
                 this.mathBubbleEl.classList.add('point-down');
             }
 
@@ -2018,20 +2073,20 @@
             if (!this.mathBubbleEl) return;
 
             const target = this.activeMathTarget;
+            this.activeMathTarget = null;
             this.mathBubbleEl.classList.remove('show');
 
             if (target) {
                 target.classList.remove('is-active');
-                const rawCode = this.mathBubbleEl.textContent || '';
-                const code = rawCode.trim();
+                const rawCode = this.mathBubbleEl.innerText || this.mathBubbleEl.textContent || '';
+                const code = rawCode.replace(/\u200B/g, '').trim();
 
                 const parent = target.parentNode;
-                const nextNode = target.nextSibling;
-                const prevNode = target.previousSibling;
 
                 if (save && code) {
                     target.dataset.latex = code;
                     this.renderMathTarget(target);
+                    this.cleanupDummyBrInParagraph(parent);
 
                     if (moveCursorDirection === 'next') {
                         this.placeCaretAfterNode(target);
@@ -2039,20 +2094,22 @@
                         this.placeCaretBeforeNode(target);
                     }
                 } else {
-                    // 수식 코드가 비어있거나 공백만 있다면 자동 삭제 (Self-cleanup)
+                    const dummySpan = document.createElement('span');
+                    parent?.insertBefore(dummySpan, target);
                     target.remove();
 
-                    if (moveCursorDirection === 'next' && nextNode) {
-                        this.placeCaretAtNodeStart(nextNode);
-                    } else if (moveCursorDirection === 'prev' && prevNode) {
-                        this.placeCaretAtNodeEnd(prevNode);
-                    } else if (parent) {
-                        this.placeCaretAtEnd(parent);
+                    if (moveCursorDirection === 'prev') {
+                        this.placeCaretBeforeNode(dummySpan);
+                    } else if (moveCursorDirection === 'next') {
+                        this.placeCaretAfterNode(dummySpan);
+                    }
+                    dummySpan.remove();
+                    this.cleanupDummyBrInParagraph(parent);
+                    if (parent && parent.childNodes.length === 1 && parent.firstChild.tagName === 'BR') {
+                        this.focusBlock(parent, true);
                     }
                 }
             }
-
-            this.activeMathTarget = null;
         }
 
         renderMathTarget(target) {
@@ -2066,11 +2123,16 @@
             if (typeof katex !== 'undefined') {
                 try {
                     const expr = prepareLatexForRender(latex, false);
-                    const rendered = katex.renderToString(expr, {
+                    let rendered = katex.renderToString(expr, {
                         displayMode: false,
                         throwOnError: false,
                         trust: true
                     });
+                    const hasAlignedOrGathered = /\\begin\{(?:aligned|gathered)\}/.test(expr);
+                    const hasArray = /\\begin\{array\}/.test(expr);
+                    if (hasAlignedOrGathered && !hasArray) {
+                        rendered = rendered.replace(/class="([^"]*katex[^"]*)"/, 'class="$1 katex-multiline-env"');
+                    }
                     target.innerHTML = rendered;
                 } catch (err) {
                     target.textContent = `$${latex}$`;
@@ -2085,16 +2147,7 @@
             span.className = 'inline-math';
             span.dataset.latex = latex || '';
             span.contentEditable = 'false';
-
             this.renderMathTarget(span);
-
-            span.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (this.activeBox && this.activeBox.classList.contains('is-editing')) {
-                    this.activateMathBubble(span, 'end');
-                }
-            });
-
             return span;
         }
 
@@ -2102,58 +2155,39 @@
             if (!container) return;
             container.querySelectorAll('.inline-math').forEach(span => {
                 span.contentEditable = 'false';
-                this.renderMathTarget(span);
-
-                if (!span._hasMathClickListener) {
-                    span._hasMathClickListener = true;
-                    span.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (this.activeBox && this.activeBox.classList.contains('is-editing')) {
-                            this.activateMathBubble(span, 'end');
-                        }
-                    });
+                if (!span.querySelector('.katex')) {
+                    this.renderMathTarget(span);
                 }
             });
         }
 
-        // =========================================================================
-        // TikZ 그래프 미니 코드 버블 메서드 (Graph Bubble Methods)
-        // =========================================================================
         initGraphBubbleEvents() {
             if (!this.graphBubbleEl) return;
 
-            // 버블 내부 클릭 시 캔버스 제스처(이동, 선택 등) 전파 차단
             this.graphBubbleEl.addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
             });
 
-            // 실시간 렌더링 및 버블 위치 실시간 추적
             this.graphBubbleEl.addEventListener('input', () => {
                 if (!this.activeGraphTarget) return;
-                const code = this.graphBubbleEl.textContent || '';
+                const code = (this.graphBubbleEl.innerText || this.graphBubbleEl.textContent || '').replace(/\u200B/g, '');
                 this.activeGraphTarget.dataset.tikz = code;
                 this.renderGraphTarget(this.activeGraphTarget);
-                this.positionGraphBubble(this.activeGraphTarget);
             });
 
-            // 키보드 내비게이션 및 탈출/확정 처리
             this.graphBubbleEl.addEventListener('keydown', (e) => {
                 if (!this.activeGraphTarget) return;
 
-                // Enter (Shift 없는 경우): 확정 및 다음 위치로 탈출
                 if (e.key === 'Enter') {
-                    if (e.shiftKey) {
-                        return; // Shift+Enter: 줄바꿈 허용
-                    }
+                    if (e.shiftKey) return;
                     e.preventDefault();
                     e.stopPropagation();
                     this.deactivateGraphBubble(true, 'next');
                     return;
                 }
 
-                // Backspace: 코드가 비어있을 때 즉시 삭제 및 이전 텍스트로 탈출
                 if (e.key === 'Backspace') {
-                    const code = this.graphBubbleEl.textContent.trim();
+                    const code = (this.graphBubbleEl.textContent || '').replace(/\u200B/g, '').trim();
                     if (!code) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -2162,7 +2196,6 @@
                     }
                 }
 
-                // ArrowRight / ArrowDown: 버블 텍스트 끝에 있을 때 오른쪽 텍스트로 탈출
                 if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                     if (this.isCaretAtEnd(this.graphBubbleEl)) {
                         e.preventDefault();
@@ -2172,7 +2205,6 @@
                     }
                 }
 
-                // ArrowLeft / ArrowUp: 버블 텍스트 맨 앞에 있을 때 왼쪽 텍스트로 탈출
                 if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
                     if (this.isCaretAtStart(this.graphBubbleEl)) {
                         e.preventDefault();
@@ -2182,16 +2214,14 @@
                     }
                 }
 
-                // Escape: 버블 닫기 (비어있으면 자동 삭제)
                 if (e.key === 'Escape') {
                     e.preventDefault();
                     e.stopPropagation();
-                    this.deactivateGraphBubble(true, 'none');
+                    this.deactivateGraphBubble(true, 'next');
                     return;
                 }
             });
 
-            // 순수 텍스트 붙여넣기
             this.graphBubbleEl.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const pasteText = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
@@ -2230,16 +2260,15 @@
             if (!this.graphBubbleEl || !graphTarget) return;
 
             const rect = graphTarget.getBoundingClientRect();
-            const textLen = (graphTarget.dataset.tikz || '').length;
-            const bubbleWidth = Math.max(220, Math.min(580, Math.max(textLen * 8 + 60, 240)));
+            const bubbleWidth = 240;
 
             let left = rect.left + (rect.width / 2) - (bubbleWidth / 2);
-            let top = rect.top - 46; // 그래프 위쪽
+            let top = rect.top - 46;
 
             this.graphBubbleEl.classList.remove('point-down');
 
             if (top < 10) {
-                top = rect.bottom + 8; // 상단 공간 부족 시 아래쪽 표시
+                top = rect.bottom + 8;
                 this.graphBubbleEl.classList.add('point-down');
             }
 
@@ -2257,20 +2286,20 @@
             if (!this.graphBubbleEl) return;
 
             const target = this.activeGraphTarget;
+            this.activeGraphTarget = null;
             this.graphBubbleEl.classList.remove('show');
 
             if (target) {
                 target.classList.remove('is-active');
-                const rawCode = this.graphBubbleEl.textContent || '';
-                const code = rawCode.trim();
+                const rawCode = this.graphBubbleEl.innerText || this.graphBubbleEl.textContent || '';
+                const code = rawCode.replace(/\u200B/g, '').trim();
 
                 const parent = target.parentNode;
-                const nextNode = target.nextSibling;
-                const prevNode = target.previousSibling;
 
                 if (save && code) {
                     target.dataset.tikz = code;
                     this.renderGraphTarget(target);
+                    this.cleanupDummyBrInParagraph(parent);
 
                     if (moveCursorDirection === 'next') {
                         this.placeCaretAfterNode(target);
@@ -2278,19 +2307,22 @@
                         this.placeCaretBeforeNode(target);
                     }
                 } else {
+                    const dummySpan = document.createElement('span');
+                    parent?.insertBefore(dummySpan, target);
                     target.remove();
 
-                    if (moveCursorDirection === 'next' && nextNode) {
-                        this.placeCaretAtNodeStart(nextNode);
-                    } else if (moveCursorDirection === 'prev' && prevNode) {
-                        this.placeCaretAtNodeEnd(prevNode);
-                    } else if (parent) {
-                        this.placeCaretAtEnd(parent);
+                    if (moveCursorDirection === 'prev') {
+                        this.placeCaretBeforeNode(dummySpan);
+                    } else if (moveCursorDirection === 'next') {
+                        this.placeCaretAfterNode(dummySpan);
+                    }
+                    dummySpan.remove();
+                    this.cleanupDummyBrInParagraph(parent);
+                    if (parent && parent.childNodes.length === 1 && parent.firstChild.tagName === 'BR') {
+                        this.focusBlock(parent, true);
                     }
                 }
             }
-
-            this.activeGraphTarget = null;
         }
 
         renderGraphTarget(target) {
@@ -2319,16 +2351,7 @@
             span.className = 'inline-graph';
             span.dataset.tikz = tikz || '';
             span.contentEditable = 'false';
-
             this.renderGraphTarget(span);
-
-            span.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (this.activeBox && this.activeBox.classList.contains('is-editing')) {
-                    this.activateGraphBubble(span, 'end');
-                }
-            });
-
             return span;
         }
 
@@ -2336,16 +2359,8 @@
             if (!container) return;
             container.querySelectorAll('.inline-graph').forEach(span => {
                 span.contentEditable = 'false';
-                this.renderGraphTarget(span);
-
-                if (!span._hasGraphClickListener) {
-                    span._hasGraphClickListener = true;
-                    span.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (this.activeBox && this.activeBox.classList.contains('is-editing')) {
-                            this.activateGraphBubble(span, 'end');
-                        }
-                    });
+                if (!span.querySelector('svg')) {
+                    this.renderGraphTarget(span);
                 }
             });
         }
@@ -2356,6 +2371,7 @@
             if (!textEl) return;
 
             textEl.focus();
+            this.normalizeBlocks(textEl);
 
             const sel = window.getSelection();
             let range = null;
@@ -2378,95 +2394,54 @@
 
             if (!range) return;
 
+            if (range.startContainer === textEl) {
+                const targetP = this.getDeepestParagraph(textEl.lastElementChild || textEl.firstElementChild, true);
+                if (targetP) {
+                    this.focusBlock(targetP, false);
+                    range = window.getSelection().getRangeAt(0);
+                }
+            }
+
             range.deleteContents();
 
             const graphSpan = this.createInlineGraphElement('');
             range.insertNode(graphSpan);
 
-            // 바로 뒤에 텍스트 노드가 없으면 빈 텍스트 노드 추가하여 커서 탈출 지원
-            if (!graphSpan.nextSibling) {
-                graphSpan.parentNode.appendChild(document.createTextNode(''));
+            const parent = graphSpan.parentNode;
+            this.cleanupDummyBrInParagraph(parent);
+
+            if (!graphSpan.nextSibling || graphSpan.nextSibling.nodeType !== Node.TEXT_NODE) {
+                parent.insertBefore(document.createTextNode('\u200B'), graphSpan.nextSibling);
+            } else if (graphSpan.nextSibling.nodeValue === '') {
+                graphSpan.nextSibling.nodeValue = '\u200B';
             }
 
             this.activateGraphBubble(graphSpan, 'end');
         }
 
-
         getNextSiblingInlineGraph() {
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return null;
-            const range = sel.getRangeAt(0);
-            if (!range.collapsed) return null;
-
-            let node = range.endContainer;
-            let offset = range.endOffset;
-
-            if (node.nodeType === Node.TEXT_NODE) {
-                if (offset === node.length) {
-                    let next = node.nextSibling;
-                    while (next && next.nodeType === Node.TEXT_NODE && next.length === 0) {
-                        next = next.nextSibling;
-                    }
-                    if (next && next.classList && next.classList.contains('inline-graph')) {
-                        return next;
-                    }
-                }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const child = node.childNodes[offset];
-                if (child && child.classList && child.classList.contains('inline-graph')) {
-                    return child;
-                }
-            }
-            return null;
+            return this.findAdjacentInlineElement('next', 'inline-graph');
         }
 
         getPrevSiblingInlineGraph() {
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return null;
-            const range = sel.getRangeAt(0);
-            if (!range.collapsed) return null;
-
-            let node = range.startContainer;
-            let offset = range.startOffset;
-
-            if (node.nodeType === Node.TEXT_NODE) {
-                if (offset === 0) {
-                    let prev = node.previousSibling;
-                    while (prev && prev.nodeType === Node.TEXT_NODE && prev.length === 0) {
-                        prev = prev.previousSibling;
-                    }
-                    if (prev && prev.classList && prev.classList.contains('inline-graph')) {
-                        return prev;
-                    }
-                }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const child = node.childNodes[offset - 1];
-                if (child && child.classList && child.classList.contains('inline-graph')) {
-                    return child;
-                }
-            }
-            return null;
+            return this.findAdjacentInlineElement('prev', 'inline-graph');
         }
 
         initMarkerBubbleEvents() {
             if (!this.markerBubbleEl) return;
 
-            // 버블 내부 클릭 시 캔버스 제스처(이동, 선택 등) 전파 차단
             this.markerBubbleEl.addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
             });
 
-            // 기호 입력 중 버블 위치 및 크기 실시간 업데이트
             this.markerBubbleEl.addEventListener('input', () => {
                 if (!this.activeMarkerTarget) return;
                 this.positionMarkerBubble(this.activeMarkerTarget);
             });
 
-            // 키보드 내비게이션 및 탈출/확정 처리
             this.markerBubbleEl.addEventListener('keydown', (e) => {
                 if (!this.activeMarkerTarget) return;
 
-                // Enter: 기호 확정 및 내용 영역으로 포커스
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     e.stopPropagation();
@@ -2474,7 +2449,6 @@
                     return;
                 }
 
-                // Escape: 취소하고 버블 닫기
                 if (e.key === 'Escape') {
                     e.preventDefault();
                     e.stopPropagation();
@@ -2483,7 +2457,6 @@
                 }
             });
 
-            // 순수 텍스트 붙여넣기
             this.markerBubbleEl.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const pasteText = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
@@ -2499,7 +2472,6 @@
             if (this.activeMarkerTarget && this.activeMarkerTarget !== markerEl) {
                 this.deactivateMarkerBubble(true);
             }
-
             if (this.activeMathTarget) {
                 this.deactivateMathBubble(true, 'none');
             }
@@ -2534,12 +2506,12 @@
             const bubbleWidth = Math.max(70, Math.min(200, textLen * 11 + 36));
 
             let left = rect.left + (rect.width / 2) - (bubbleWidth / 2);
-            let top = rect.top - 42; // 마커 위쪽
+            let top = rect.top - 42;
 
             this.markerBubbleEl.classList.remove('point-down');
 
             if (top < 10) {
-                top = rect.bottom + 8; // 상단 공간 부족 시 아래쪽 표시
+                top = rect.bottom + 8;
                 this.markerBubbleEl.classList.add('point-down');
             }
 
@@ -2557,6 +2529,7 @@
             if (!this.markerBubbleEl) return;
 
             const target = this.activeMarkerTarget;
+            this.activeMarkerTarget = null;
             this.markerBubbleEl.classList.remove('show');
 
             if (target) {
@@ -2567,15 +2540,13 @@
                     target.textContent = val || '•';
                 }
 
-                // 해당 글머리 기호의 내용 영역으로 포커스 복원
                 const bulletItem = target.closest('.bullet-item');
-                const contentEl = bulletItem?.querySelector('.bullet-content');
-                if (contentEl) {
-                    this.focusBlock(contentEl, true);
+                const contentEl = bulletItem?.querySelector(':scope > .bullet-content');
+                const firstP = contentEl?.querySelector(':scope > p') || contentEl;
+                if (firstP) {
+                    this.focusBlock(firstP, true);
                 }
             }
-
-            this.activeMarkerTarget = null;
         }
 
         createBulletItemElement(marker = '•', contentHtml = '<p><br></p>') {
@@ -2587,20 +2558,15 @@
             markerEl.contentEditable = 'false';
             markerEl.textContent = marker || '•';
 
-            markerEl.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (this.activeBox && this.activeBox.classList.contains('is-editing')) {
-                    this.activateMarkerBubble(markerEl);
-                }
-            });
-
             const contentEl = document.createElement('div');
             contentEl.className = 'bullet-content';
-            let html = contentHtml || '<p><br></p>';
-            if (!/<p\b/i.test(html)) {
-                html = `<p>${html}</p>`;
+            if (contentHtml !== null) {
+                let html = contentHtml || '<p><br></p>';
+                if (!/<p\b/i.test(html)) {
+                    html = `<p>${html}</p>`;
+                }
+                contentEl.innerHTML = html;
             }
-            contentEl.innerHTML = html;
 
             item.appendChild(markerEl);
             item.appendChild(contentEl);
@@ -2612,15 +2578,6 @@
             if (!container) return;
             container.querySelectorAll('.bullet-marker').forEach(markerEl => {
                 markerEl.contentEditable = 'false';
-                if (!markerEl._hasMarkerClickListener) {
-                    markerEl._hasMarkerClickListener = true;
-                    markerEl.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (this.activeBox && this.activeBox.classList.contains('is-editing')) {
-                            this.activateMarkerBubble(markerEl);
-                        }
-                    });
-                }
             });
         }
 
@@ -2639,12 +2596,16 @@
             return null;
         }
 
+        // [규칙 2 & 규칙 4]:
+        // - 일반 <p>에서 글머리 추가 시 -> 해당 <p>(내용 포함)가 그대로 list(.bullet-item) 안으로 들어감
+        // - list 안에서 글머리 추가 시 -> 그 안에서 새 하위 list(.bullet-item) 추가
         insertBulletItem() {
             if (!this.activeBox) return;
             const textEl = this.activeBox.querySelector('.box-text');
             if (!textEl) return;
 
             textEl.focus();
+            this.normalizeBlocks(textEl);
 
             const sel = window.getSelection();
             let range = null;
@@ -2661,23 +2622,21 @@
             if (!range) {
                 const newBullet = this.createBulletItemElement('•', '<p><br></p>');
                 textEl.appendChild(newBullet);
-                this.focusBlock(newBullet.querySelector('.bullet-content p') || newBullet.querySelector('.bullet-content'), true);
+                this.focusBlock(newBullet.querySelector(':scope > .bullet-content > p'), true);
                 return;
             }
 
-            // 현재 커서가 bullet-content 내부인지 검사
             let node = range.startContainer;
             if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
             const currentBullet = node?.closest?.('.bullet-item');
 
+            // [규칙 4]: 이미 list(.bullet-item) 안에 있는 경우 -> 그 안에서 새 하위 list 추가
             if (currentBullet && textEl.contains(currentBullet)) {
-                // [요구사항]: 글머리 기호 안에서 글머리 기호 추가 시 -> 하위(들여쓰기된) 글머리 기호 생성
-                const contentEl = currentBullet.querySelector('.bullet-content');
+                const contentEl = currentBullet.querySelector(':scope > .bullet-content');
                 let currentP = node?.closest?.('p');
-                if (currentP && !contentEl.contains(currentP)) currentP = null;
+                if (currentP && currentP.parentNode !== contentEl) currentP = null;
 
-                // 계층형 서브 마커 자동 선택: • -> ◦ -> ▪ -> -
-                let parentMarker = currentBullet.querySelector('.bullet-marker')?.textContent?.trim() || '•';
+                let parentMarker = currentBullet.querySelector(':scope > .bullet-marker')?.textContent?.trim() || '•';
                 let subMarker = '◦';
                 if (parentMarker === '◦') subMarker = '▪';
                 else if (parentMarker === '▪') subMarker = '-';
@@ -2686,109 +2645,168 @@
                 const newSubBullet = this.createBulletItemElement(subMarker, '<p><br></p>');
 
                 if (currentP) {
-                    const isPEmpty = (!currentP.textContent || currentP.textContent.trim() === '') && !currentP.querySelector('.inline-math, .inline-graph');
-                    if (isPEmpty) {
-                        // 빈 문단이면 바로 그 자리에 하위 글머리 기호 생성
+                    const isPEmpty = (!currentP.textContent || currentP.textContent.replace(/\u200B/g, '').trim() === '') &&
+                        !currentP.querySelector('.inline-math, .inline-graph');
+                    if (isPEmpty && contentEl.children.length > 1) {
+                        // Shift+Enter로 만든 두 번째 이후 빈 <p>에서 글머리 추가 시 그 자리에 하위 리스트 생성
                         currentP.replaceWith(newSubBullet);
                     } else {
-                        // 내용이 있는 문단이면 다음 문단 자리에 생성
+                        // 현재 문단 바로 아래(같은 .bullet-content 내부)에 하위 리스트 추가
                         currentP.after(newSubBullet);
                     }
                 } else {
                     contentEl.appendChild(newSubBullet);
                 }
 
-                const targetFocus = newSubBullet.querySelector('.bullet-content p') || newSubBullet.querySelector('.bullet-content');
+                const targetFocus = newSubBullet.querySelector(':scope > .bullet-content > p') || newSubBullet.querySelector(':scope > .bullet-content');
                 this.focusBlock(targetFocus, true);
                 return;
             }
 
-            // 글머리 기호 바깥(일반 문단)인 경우
+            // [규칙 2]: 일반 문단(<p>)에서 글머리 추가를 누르면 해당 <p> 자체가 list 안에 들어감
             let targetBlock = range.startContainer;
             while (targetBlock && targetBlock.parentNode !== textEl) {
                 targetBlock = targetBlock.parentNode;
             }
 
-            const newBullet = this.createBulletItemElement('•', '<p><br></p>');
-            if (targetBlock) {
+            if (targetBlock && targetBlock.tagName === 'P') {
+                const newBullet = this.createBulletItemElement('•', null);
                 if (targetBlock.style.paddingLeft) {
                     newBullet.style.paddingLeft = targetBlock.style.paddingLeft;
-                }
-                if (targetBlock.tagName === 'P') {
-                    const isEmpty = (!targetBlock.textContent || targetBlock.textContent.trim() === '') && !targetBlock.querySelector('.inline-math, .inline-graph');
-                    if (isEmpty) {
-                        targetBlock.replaceWith(newBullet);
-                    } else {
-                        targetBlock.after(newBullet);
+                    targetBlock.style.paddingLeft = '';
+                    if (!targetBlock.getAttribute('style') || targetBlock.style.cssText.trim() === '') {
+                        targetBlock.removeAttribute('style');
                     }
-                } else {
-                    targetBlock.after(newBullet);
                 }
+                const contentEl = newBullet.querySelector(':scope > .bullet-content');
+                targetBlock.replaceWith(newBullet);
+                contentEl.appendChild(targetBlock);
+                this.cleanupDummyBrInParagraph(targetBlock);
+                this.focusBlock(targetBlock, false);
             } else {
-                textEl.appendChild(newBullet);
+                const newBullet = this.createBulletItemElement('•', '<p><br></p>');
+                if (targetBlock) {
+                    targetBlock.after(newBullet);
+                } else {
+                    textEl.appendChild(newBullet);
+                }
+                this.focusBlock(newBullet.querySelector(':scope > .bullet-content > p'), true);
             }
-
-            const targetFocus = newBullet.querySelector('.bullet-content p') || newBullet.querySelector('.bullet-content');
-            this.focusBlock(targetFocus, true);
         }
 
-        handleBulletEnter(currentBullet) {
-            const contentEl = currentBullet.querySelector('.bullet-content');
+        // [규칙 3-A]: list 안에서 Shift+Enter를 누르면 list(.bullet-content) 안에서 새로운 <p> 생성
+        handleBulletShiftEnter(currentBullet) {
+            const contentEl = currentBullet.querySelector(':scope > .bullet-content');
             if (!contentEl) return;
 
             const sel = window.getSelection();
             if (!sel || !sel.rangeCount) return;
             const range = sel.getRangeAt(0);
+            range.deleteContents();
 
-            // [요구사항 1]: 글머리 기호 안에서 엔터 시 같은 bullet-content 안에 새 문단(<p>) 생성
             let node = range.startContainer;
             if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
             let currentP = node?.closest?.('p');
 
-            // 만약 contentEl 안에 <p>가 없는 구형 구조라면 전체를 <p>로 먼저 감싸서 정규화
-            if (!currentP || !contentEl.contains(currentP)) {
+            if (!currentP || currentP.parentNode !== contentEl) {
                 const p = document.createElement('p');
-                while (contentEl.firstChild) {
+                while (contentEl.firstChild && !(contentEl.firstChild.classList && contentEl.firstChild.classList.contains('bullet-item'))) {
                     p.appendChild(contentEl.firstChild);
                 }
-                if (!p.childNodes.length) p.innerHTML = '<br>';
-                contentEl.appendChild(p);
+                this.cleanupDummyBrInParagraph(p);
+                contentEl.insertBefore(p, contentEl.firstChild);
                 currentP = p;
             }
 
-            // 현재 <p> 안에서 캐럿 위치를 기준으로 내용 분할
             const newP = document.createElement('p');
+            if (currentP.style.textAlign) newP.style.textAlign = currentP.style.textAlign;
 
             if (currentP.contains(range.startContainer)) {
                 const splitRange = range.cloneRange();
                 splitRange.setEnd(currentP, currentP.childNodes.length);
                 const extractedFrag = splitRange.extractContents();
 
-                if (extractedFrag && (extractedFrag.textContent !== '' || (extractedFrag.querySelector && extractedFrag.querySelector('.inline-math, .inline-graph')))) {
-                    newP.appendChild(extractedFrag);
-                } else {
-                    newP.innerHTML = '<br>';
-                }
+                const hasText = (extractedFrag.textContent || '').replace(/\u200B/g, '').trim().length > 0;
+                const hasMath = extractedFrag.querySelector && !!extractedFrag.querySelector('.inline-math, .inline-graph');
 
-                if (!currentP.childNodes.length || currentP.innerHTML.trim() === '') {
-                    currentP.innerHTML = '<br>';
+                if (hasText || hasMath) {
+                    newP.appendChild(extractedFrag);
                 }
-            } else {
-                newP.innerHTML = '<br>';
             }
+
+            this.cleanupDummyBrInParagraph(currentP);
+            this.cleanupDummyBrInParagraph(newP);
 
             currentP.after(newP);
             this.focusBlock(newP, true);
         }
 
-        removeBulletItem(currentBullet) {
-            let contentEl = null;
-            for (let c of currentBullet.children) {
-                if (c.classList && c.classList.contains('bullet-content')) {
-                    contentEl = c;
-                    break;
+        // [규칙 3-B]: list 안에서 Enter를 누르면 다음 list(.bullet-item) 생성
+        handleBulletEnter(currentBullet) {
+            const contentEl = currentBullet.querySelector(':scope > .bullet-content');
+            if (!contentEl) return;
+
+            const sel = window.getSelection();
+            if (!sel || !sel.rangeCount) return;
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+
+            let node = range.startContainer;
+            if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+            let currentP = node?.closest?.('p');
+
+            if (!currentP || currentP.parentNode !== contentEl) {
+                const p = document.createElement('p');
+                while (contentEl.firstChild && !(contentEl.firstChild.classList && contentEl.firstChild.classList.contains('bullet-item'))) {
+                    p.appendChild(contentEl.firstChild);
+                }
+                this.cleanupDummyBrInParagraph(p);
+                contentEl.insertBefore(p, contentEl.firstChild);
+                currentP = p;
+            }
+
+            const markerText = currentBullet.querySelector(':scope > .bullet-marker')?.textContent || '•';
+            const newBullet = this.createBulletItemElement(markerText, null);
+            if (currentBullet.style.paddingLeft) {
+                newBullet.style.paddingLeft = currentBullet.style.paddingLeft;
+            }
+            const newContentEl = newBullet.querySelector(':scope > .bullet-content');
+
+            const newP = document.createElement('p');
+            if (currentP.style.textAlign) newP.style.textAlign = currentP.style.textAlign;
+
+            if (currentP.contains(range.startContainer)) {
+                const splitRange = range.cloneRange();
+                splitRange.setEnd(currentP, currentP.childNodes.length);
+                const extractedFrag = splitRange.extractContents();
+
+                const hasText = (extractedFrag.textContent || '').replace(/\u200B/g, '').trim().length > 0;
+                const hasMath = extractedFrag.querySelector && !!extractedFrag.querySelector('.inline-math, .inline-graph');
+
+                if (hasText || hasMath) {
+                    newP.appendChild(extractedFrag);
                 }
             }
+
+            this.cleanupDummyBrInParagraph(currentP);
+            this.cleanupDummyBrInParagraph(newP);
+            newContentEl.appendChild(newP);
+
+            // 현재 <p> 뒤에 있던 다른 문단이나 하위 리스트가 있다면 새 list로 함께 이동
+            let nextSibling = currentP.nextSibling;
+            while (nextSibling) {
+                const toMove = nextSibling;
+                nextSibling = nextSibling.nextSibling;
+                newContentEl.appendChild(toMove);
+            }
+
+            currentBullet.after(newBullet);
+            this.focusBlock(newP, true);
+        }
+
+        // [규칙 5]: list의 맨 앞에서 Backspace를 하면 글머리 삭제하고 일반 <p>로 복귀
+        removeBulletItem(currentBullet) {
+            const contentEl = currentBullet.querySelector(':scope > .bullet-content');
             const textEl = this.activeBox?.querySelector('.box-text');
             if (!textEl || !contentEl) return;
 
@@ -2809,7 +2827,8 @@
                 });
                 currentBullet.remove();
                 if (firstFocus) {
-                    this.focusBlock(firstFocus, true);
+                    const targetP = firstFocus.tagName === 'P' ? firstFocus : this.getDeepestParagraph(firstFocus, false);
+                    this.focusBlock(targetP || firstFocus, true);
                 }
             } else {
                 const p = document.createElement('p');
@@ -2871,7 +2890,6 @@
             const range = currentSel.getRangeAt(0);
             if (!textEl.contains(range.commonAncestorContainer)) return;
 
-            // 모든 문단/블록 요소(<p>, .bullet-item 내의 <p>, div) 수집
             const allBlocks = this.getAllParagraphBlocks(textEl);
 
             const targetBlocks = allBlocks.filter(block => {
@@ -2945,7 +2963,6 @@
             const range = currentSel.getRangeAt(0);
             if (!textEl.contains(range.commonAncestorContainer)) return;
 
-            // 모든 문단/블록 요소(<p>, .bullet-item, div) 수집
             const allBlocks = Array.from(textEl.children).filter(el =>
                 el.tagName === 'P' || el.classList.contains('bullet-item') || el.tagName === 'DIV'
             );
@@ -2997,7 +3014,6 @@
             if (!block || !block.style) return 0;
             const mb = block.style.marginBottom || '';
             if (!mb) {
-                // block이 <p>이고 부모 bullet-item에 legacy marginBottom이 있다면 참조
                 const parentBullet = block.closest?.('.bullet-item');
                 if (parentBullet && parentBullet.style?.marginBottom) {
                     const matchParent = parentBullet.style.marginBottom.match(/^([+-]?[\d.]+)\s*em$/i);
@@ -3048,7 +3064,6 @@
                 let left = rect.left + 8;
                 let top = rect.bottom + 6;
 
-                // 화면 벗어남 방지 보정
                 if (left + tipWidth > window.innerWidth - 10) {
                     left = window.innerWidth - tipWidth - 10;
                 }
@@ -3087,7 +3102,6 @@
             const range = currentSel.getRangeAt(0);
             if (!textEl.contains(range.commonAncestorContainer)) return;
 
-            // 모든 문단/블록 요소(<p>, .bullet-item 내의 <p>, div) 수집
             const allBlocks = this.getAllParagraphBlocks(textEl);
 
             const targetBlocks = allBlocks.filter(block => {
@@ -3112,7 +3126,6 @@
             let lastVal = 0;
             targetBlocks.forEach(block => {
                 const curMargin = this.getBlockMarginBottom(block);
-                // 최솟값 -2.0em, 최댓값 +2.0em, 0.25em 단위 증감
                 const nextMargin = Math.max(-2, Math.min(2, Math.round((curMargin + delta) * 100) / 100));
                 lastVal = nextMargin;
 
@@ -3125,7 +3138,6 @@
                     }
                 }
 
-                // block이 <p>이고 부모 bullet-item에 legacy marginBottom이 있다면 정리하여 충돌 방지
                 const parentBullet = block.closest?.('.bullet-item');
                 if (parentBullet && parentBullet.style?.marginBottom) {
                     parentBullet.style.marginBottom = '';
@@ -3150,6 +3162,7 @@
             if (!textEl) return;
 
             textEl.focus();
+            this.normalizeBlocks(textEl);
 
             const sel = window.getSelection();
             let range = null;
@@ -3172,49 +3185,33 @@
 
             if (!range) return;
 
-            const selectedText = range.toString().trim();
+            if (range.startContainer === textEl) {
+                const targetP = this.getDeepestParagraph(textEl.lastElementChild || textEl.firstElementChild, true);
+                if (targetP) {
+                    this.focusBlock(targetP, false);
+                    range = window.getSelection().getRangeAt(0);
+                }
+            }
+
+            const selectedText = range.toString().replace(/\u200B/g, '').trim();
             range.deleteContents();
 
             const mathSpan = this.createInlineMathElement(selectedText);
             range.insertNode(mathSpan);
 
-            // 바로 뒤에 텍스트 노드가 없으면 빈 텍스트 노드 추가하여 커서 탈출 지원
-            if (!mathSpan.nextSibling) {
-                mathSpan.parentNode.appendChild(document.createTextNode(''));
+            const parent = mathSpan.parentNode;
+            this.cleanupDummyBrInParagraph(parent);
+
+            if (!mathSpan.nextSibling || mathSpan.nextSibling.nodeType !== Node.TEXT_NODE) {
+                parent.insertBefore(document.createTextNode('\u200B'), mathSpan.nextSibling);
+            } else if (mathSpan.nextSibling.nodeValue === '') {
+                mathSpan.nextSibling.nodeValue = '\u200B';
             }
 
             this.activateMathBubble(mathSpan, 'end');
         }
 
-        getNextSiblingInlineMath() {
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return null;
-            const range = sel.getRangeAt(0);
-            if (!range.collapsed) return null;
-
-            let node = range.endContainer;
-            let offset = range.endOffset;
-
-            if (node.nodeType === Node.TEXT_NODE) {
-                if (offset === node.length) {
-                    let next = node.nextSibling;
-                    while (next && next.nodeType === Node.TEXT_NODE && next.length === 0) {
-                        next = next.nextSibling;
-                    }
-                    if (next && next.classList && next.classList.contains('inline-math')) {
-                        return next;
-                    }
-                }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const child = node.childNodes[offset];
-                if (child && child.classList && child.classList.contains('inline-math')) {
-                    return child;
-                }
-            }
-            return null;
-        }
-
-        getPrevSiblingInlineMath() {
+        findAdjacentInlineElement(direction, className) {
             const sel = window.getSelection();
             if (!sel || !sel.rangeCount) return null;
             const range = sel.getRangeAt(0);
@@ -3223,23 +3220,68 @@
             let node = range.startContainer;
             let offset = range.startOffset;
 
-            if (node.nodeType === Node.TEXT_NODE) {
-                if (offset === 0) {
-                    let prev = node.previousSibling;
-                    while (prev && prev.nodeType === Node.TEXT_NODE && prev.length === 0) {
-                        prev = prev.previousSibling;
+            if (direction === 'next') {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const remainingText = node.nodeValue.substring(offset).replace(/\u200B/g, '');
+                    if (remainingText.length > 0) return null;
+
+                    let next = node.nextSibling;
+                    while (next && next.nodeType === Node.TEXT_NODE && next.nodeValue.replace(/\u200B/g, '').length === 0) {
+                        next = next.nextSibling;
                     }
-                    if (prev && prev.classList && prev.classList.contains('inline-math')) {
-                        return prev;
+                    if (next && next.nodeType === Node.ELEMENT_NODE && next.classList.contains(className)) {
+                        return next;
+                    }
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    let idx = offset;
+                    while (idx < node.childNodes.length) {
+                        const child = node.childNodes[idx];
+                        if (child.nodeType === Node.TEXT_NODE && child.nodeValue.replace(/\u200B/g, '').length === 0) {
+                            idx++;
+                            continue;
+                        }
+                        if (child.nodeType === Node.ELEMENT_NODE && child.classList.contains(className)) {
+                            return child;
+                        }
+                        break;
                     }
                 }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const child = node.childNodes[offset - 1];
-                if (child && child.classList && child.classList.contains('inline-math')) {
-                    return child;
+            } else if (direction === 'prev') {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const precedingText = node.nodeValue.substring(0, offset).replace(/\u200B/g, '');
+                    if (precedingText.length > 0) return null;
+
+                    let prev = node.previousSibling;
+                    while (prev && prev.nodeType === Node.TEXT_NODE && prev.nodeValue.replace(/\u200B/g, '').length === 0) {
+                        prev = prev.previousSibling;
+                    }
+                    if (prev && prev.nodeType === Node.ELEMENT_NODE && prev.classList.contains(className)) {
+                        return prev;
+                    }
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    let idx = offset - 1;
+                    while (idx >= 0) {
+                        const child = node.childNodes[idx];
+                        if (child.nodeType === Node.TEXT_NODE && child.nodeValue.replace(/\u200B/g, '').length === 0) {
+                            idx--;
+                            continue;
+                        }
+                        if (child.nodeType === Node.ELEMENT_NODE && child.classList.contains(className)) {
+                            return child;
+                        }
+                        break;
+                    }
                 }
             }
             return null;
+        }
+
+        getNextSiblingInlineMath() {
+            return this.findAdjacentInlineElement('next', 'inline-math');
+        }
+
+        getPrevSiblingInlineMath() {
+            return this.findAdjacentInlineElement('prev', 'inline-math');
         }
 
         placeCaretAtNodeStart(node) {
@@ -3273,12 +3315,29 @@
         placeCaretAfterNode(node) {
             if (!node || !node.parentNode) return;
             const parent = node.parentNode;
+            const textEl = this.activeBox?.querySelector('.box-text');
+            if (textEl) textEl.focus();
+
+            this.cleanupDummyBrInParagraph(parent);
+
             let targetNode = node.nextSibling;
             let offset = 0;
+
             if (!targetNode || targetNode.nodeType !== Node.TEXT_NODE) {
-                targetNode = document.createTextNode('');
+                targetNode = document.createTextNode('\u200B');
                 parent.insertBefore(targetNode, node.nextSibling);
+                offset = 1;
+            } else {
+                if (targetNode.nodeValue.length === 0) {
+                    targetNode.nodeValue = '\u200B';
+                    offset = 1;
+                } else if (targetNode.nodeValue.startsWith('\u200B')) {
+                    offset = 1;
+                } else {
+                    offset = 0;
+                }
             }
+
             const range = document.createRange();
             range.setStart(targetNode, offset);
             range.collapse(true);
@@ -3290,15 +3349,27 @@
         placeCaretBeforeNode(node) {
             if (!node || !node.parentNode) return;
             const parent = node.parentNode;
+            const textEl = this.activeBox?.querySelector('.box-text');
+            if (textEl) textEl.focus();
+
+            this.cleanupDummyBrInParagraph(parent);
+
             let targetNode = node.previousSibling;
             let offset = 0;
+
             if (!targetNode || targetNode.nodeType !== Node.TEXT_NODE) {
-                targetNode = document.createTextNode('');
+                targetNode = document.createTextNode('\u200B');
                 parent.insertBefore(targetNode, node);
-                offset = 0;
+                offset = 1;
             } else {
-                offset = targetNode.length;
+                if (targetNode.nodeValue.length === 0) {
+                    targetNode.nodeValue = '\u200B';
+                    offset = 1;
+                } else {
+                    offset = targetNode.nodeValue.length;
+                }
             }
+
             const range = document.createRange();
             range.setStart(targetNode, offset);
             range.collapse(true);
@@ -3320,7 +3391,8 @@
                 } else {
                     const firstChild = blockEl.firstChild;
                     if (firstChild.nodeType === Node.TEXT_NODE) {
-                        range.setStart(firstChild, 0);
+                        const idx = firstChild.nodeValue.startsWith('\u200B') ? 1 : 0;
+                        range.setStart(firstChild, Math.min(idx, firstChild.length));
                     } else if (firstChild.tagName && firstChild.tagName.toLowerCase() === 'br') {
                         range.setStartBefore(firstChild);
                     } else {
@@ -3337,6 +3409,10 @@
                     if (lastChild.nodeType === Node.TEXT_NODE) {
                         range.setStart(lastChild, lastChild.length);
                         range.collapse(true);
+                    } else if (lastChild.nodeType === Node.ELEMENT_NODE &&
+                        (lastChild.classList.contains('inline-math') || lastChild.classList.contains('inline-graph'))) {
+                        this.placeCaretAfterNode(lastChild);
+                        return;
                     } else if (lastChild.tagName && lastChild.tagName.toLowerCase() === 'br') {
                         range.setStartBefore(lastChild);
                         range.collapse(true);
@@ -3359,15 +3435,15 @@
             if (!range.collapsed) return false;
             if (!element.contains(range.startContainer)) return false;
 
-            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') &&
-                !element.querySelector('.inline-math, .inline-graph, img');
+            const cleanTotal = (element.textContent || '').replace(/\u200B/g, '').trim();
+            const isEmptyOrOnlyBr = cleanTotal === '' && !element.querySelector('.inline-math, .inline-graph, img');
             if (isEmptyOrOnlyBr) return true;
 
             const testRange = document.createRange();
             testRange.setStart(element, 0);
             testRange.setEnd(range.startContainer, range.startOffset);
             const frag = testRange.cloneContents();
-            const text = (frag.textContent || '').replace(/\r?\n/g, '');
+            const text = (frag.textContent || '').replace(/[\r\n\u200B]/g, '');
             if (text.length > 0) return false;
             if (frag.querySelector && (frag.querySelector('.inline-math, .inline-graph') || frag.querySelector('img') || frag.querySelector('br'))) return false;
             return true;
@@ -3381,41 +3457,44 @@
             if (!range.collapsed) return false;
             if (!element.contains(range.endContainer)) return false;
 
-            const isEmptyOrOnlyBr = (!element.textContent || element.textContent.trim() === '') &&
-                !element.querySelector('.inline-math, .inline-graph, img');
+            const cleanTotal = (element.textContent || '').replace(/\u200B/g, '').trim();
+            const isEmptyOrOnlyBr = cleanTotal === '' && !element.querySelector('.inline-math, .inline-graph, img');
             if (isEmptyOrOnlyBr) return true;
 
             const testRange = document.createRange();
             testRange.setStart(range.endContainer, range.endOffset);
             testRange.setEnd(element, element.childNodes.length);
             const frag = testRange.cloneContents();
-            const text = (frag.textContent || '').replace(/\r?\n/g, '');
+            const text = (frag.textContent || '').replace(/[\r\n\u200B]/g, '');
             if (text.length > 0) return false;
-            if (frag.querySelector && (frag.querySelector('.inline-math, .inline-graph') || frag.querySelector('img') || frag.querySelector('br'))) return false;
+            if (frag.querySelector && (frag.querySelector('.inline-math, .inline-graph') || frag.querySelector('img'))) return false;
+
+            const brs = frag.querySelectorAll ? Array.from(frag.querySelectorAll('br')) : [];
+            if (brs.length > 1) return false;
+            if (brs.length === 1 && element.lastChild?.nodeName !== 'BR') return false;
+
             return true;
         }
 
         getDeepestParagraph(block, atEnd = true) {
             if (!block) return null;
             if (block.classList && block.classList.contains('bullet-item')) {
-                const contentEl = block.querySelector('.bullet-content');
+                const contentEl = block.querySelector(':scope > .bullet-content');
                 if (!contentEl) return block;
 
-                if (!contentEl.querySelector('p')) {
+                if (!contentEl.querySelector(':scope > p')) {
                     const newP = document.createElement('p');
-                    while (contentEl.firstChild) {
+                    while (contentEl.firstChild && !(contentEl.firstChild.classList && contentEl.firstChild.classList.contains('bullet-item'))) {
                         newP.appendChild(contentEl.firstChild);
                     }
-                    if (!newP.childNodes.length || (newP.textContent === '' && !newP.querySelector('.inline-math, .inline-graph'))) {
-                        newP.innerHTML = '<br>';
-                    }
-                    contentEl.appendChild(newP);
+                    this.cleanupDummyBrInParagraph(newP);
+                    contentEl.insertBefore(newP, contentEl.firstChild);
                 }
 
                 if (atEnd) {
                     let candidate = contentEl.lastElementChild;
                     while (candidate && candidate.classList && candidate.classList.contains('bullet-item')) {
-                        const subContent = candidate.querySelector('.bullet-content');
+                        const subContent = candidate.querySelector(':scope > .bullet-content');
                         if (subContent && subContent.lastElementChild) {
                             candidate = subContent.lastElementChild;
                         } else {
@@ -3429,7 +3508,7 @@
                 } else {
                     let candidate = contentEl.firstElementChild;
                     while (candidate && candidate.classList && candidate.classList.contains('bullet-item')) {
-                        const subContent = candidate.querySelector('.bullet-content');
+                        const subContent = candidate.querySelector(':scope > .bullet-content');
                         if (subContent && subContent.firstElementChild) {
                             candidate = subContent.firstElementChild;
                         } else {
@@ -3482,7 +3561,7 @@
             let needsWrap = false;
             for (let node of textEl.childNodes) {
                 if (node.nodeType === Node.TEXT_NODE) {
-                    if (node.nodeValue.trim().length > 0) {
+                    if (node.nodeValue.replace(/\u200B/g, '').trim().length > 0) {
                         needsWrap = true;
                         break;
                     }
@@ -3503,9 +3582,7 @@
                     if (currentInlineNodes.length > 0) {
                         const p = document.createElement('p');
                         currentInlineNodes.forEach(n => p.appendChild(n));
-                        if (!p.childNodes.length || (p.textContent === '' && !p.querySelector('.inline-math, .inline-graph'))) {
-                            p.innerHTML = '<br>';
-                        }
+                        this.cleanupDummyBrInParagraph(p);
                         newChildren.push(p);
                         currentInlineNodes = [];
                     }
@@ -3526,6 +3603,13 @@
                 textEl.innerHTML = '';
                 newChildren.forEach(child => textEl.appendChild(child));
             }
+
+            textEl.querySelectorAll('.bullet-content').forEach(bc => {
+                if (!bc.children.length) {
+                    bc.innerHTML = '<p><br></p>';
+                }
+            });
+            textEl.querySelectorAll('p').forEach(p => this.cleanupDummyBrInParagraph(p));
 
             if (!textEl.children.length) {
                 textEl.innerHTML = '<p><br></p>';
@@ -3578,61 +3662,26 @@
             }
         }
 
+        // [규칙 1 & 규칙 3]:
+        // - list 안에서는 Shift+Enter 시 list 내부에 새 <p> 생성
+        // - 일반 문단에서는 Shift+Enter 시에도 새 <p> 생성
         insertSoftLineBreakAtCaret(textEl) {
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return;
-            const range = sel.getRangeAt(0);
-            range.deleteContents();
-
-            let targetContainer = null;
-            let node = range.startContainer;
-            while (node && node !== textEl) {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    if (node.classList?.contains('bullet-content') || node.tagName === 'P') {
-                        targetContainer = node;
-                        break;
-                    }
-                }
-                node = node.parentNode;
-            }
-
-            if (!targetContainer) {
+            const currentBullet = this.getCurrentBulletItem();
+            if (currentBullet) {
+                this.handleBulletShiftEnter(currentBullet);
+            } else {
                 this.insertParagraphBreakAtCaret(textEl);
+            }
+        }
+
+        // [규칙 1]: 일반 문단에서 Enter / Shift+Enter 시 새로운 <p> 생성
+        insertParagraphBreakAtCaret(textEl) {
+            const currentBullet = this.getCurrentBulletItem();
+            if (currentBullet) {
+                this.handleBulletEnter(currentBullet);
                 return;
             }
 
-            const br = document.createElement('br');
-            range.insertNode(br);
-
-            // br 뒤에 시각적 콘텐츠가 있는지 확인
-            let isTrailing = true;
-            let next = br.nextSibling;
-            while (next) {
-                if (next.nodeType === Node.TEXT_NODE && next.nodeValue && next.nodeValue.length > 0) {
-                    isTrailing = false;
-                    break;
-                }
-                if (next.nodeType === Node.ELEMENT_NODE && !next.classList?.contains('trailing-soft-br')) {
-                    isTrailing = false;
-                    break;
-                }
-                next = next.nextSibling;
-            }
-
-            if (isTrailing) {
-                const dummy = document.createElement('br');
-                dummy.className = 'trailing-soft-br';
-                br.after(dummy);
-            }
-
-            const newRange = document.createRange();
-            newRange.setStartAfter(br);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-        }
-
-        insertParagraphBreakAtCaret(textEl) {
             const sel = window.getSelection();
             if (!sel || !sel.rangeCount) return;
             const range = sel.getRangeAt(0);
@@ -3660,30 +3709,21 @@
                 newP.style.paddingLeft = currentBlock.style.paddingLeft;
             }
 
-            const hasText = extractedFrag.textContent && extractedFrag.textContent.length > 0;
+            const hasText = (extractedFrag.textContent || '').replace(/\u200B/g, '').trim().length > 0;
             const hasMath = extractedFrag.querySelector && !!extractedFrag.querySelector('.inline-math, .inline-graph');
 
             if (hasText || hasMath) {
                 newP.appendChild(extractedFrag);
-            } else {
-                newP.innerHTML = '<br>';
             }
 
-            const curHasText = currentBlock.textContent && currentBlock.textContent.length > 0;
-            const curHasMath = currentBlock.querySelector && !!currentBlock.querySelector('.inline-math, .inline-graph');
-            if (!curHasText && !curHasMath) {
-                currentBlock.innerHTML = '<br>';
-            } else {
-                const last = currentBlock.lastChild;
-                if (last && last.nodeType === Node.ELEMENT_NODE && last.tagName.toLowerCase() === 'br' && currentBlock.childNodes.length > 1) {
-                    last.remove();
-                }
-            }
+            this.cleanupDummyBrInParagraph(currentBlock);
+            this.cleanupDummyBrInParagraph(newP);
 
             currentBlock.after(newP);
             this.focusBlock(newP, true);
         }
 
+        // [규칙 5]: list의 맨 앞에서 Backspace를 하면 글머리 삭제하고 일반 <p>로 복귀
         handleBackspaceAtCaret(textEl, e) {
             const sel = window.getSelection();
             if (!sel || !sel.rangeCount) return;
@@ -3691,98 +3731,98 @@
 
             if (!range.collapsed) return;
 
-            // 0. 문단 내 soft break (<br>) 직후에서 Backspace를 누른 경우: 해당 <br> 삭제
-            let prevNode = null;
-            if (range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === 0) {
-                prevNode = range.startContainer.previousSibling;
-            } else if (range.startContainer.nodeType === Node.ELEMENT_NODE && range.startOffset > 0) {
-                prevNode = range.startContainer.childNodes[range.startOffset - 1];
-            }
-
-            if (prevNode && prevNode.nodeType === Node.ELEMENT_NODE && prevNode.tagName.toLowerCase() === 'br') {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const parent = prevNode.parentNode;
-                const nextNode = prevNode.nextSibling;
-                if (nextNode && nextNode.nodeType === Node.ELEMENT_NODE && nextNode.classList?.contains('trailing-soft-br')) {
-                    nextNode.remove();
-                }
-
-                const prevSiblingOfBr = prevNode.previousSibling;
-                prevNode.remove();
-
-                const newRange = document.createRange();
-                if (prevSiblingOfBr) {
-                    if (prevSiblingOfBr.nodeType === Node.TEXT_NODE) {
-                        newRange.setStart(prevSiblingOfBr, prevSiblingOfBr.length);
-                    } else {
-                        newRange.setStartAfter(prevSiblingOfBr);
+            // 수식/그래프 뒤의 \u200B 바로 뒤에서 Backspace를 누른 경우 해당 수식/그래프 버블로 진입
+            if (range.startContainer.nodeType === Node.TEXT_NODE &&
+                range.startOffset === 1 &&
+                range.startContainer.nodeValue.startsWith('\u200B')) {
+                const prev = range.startContainer.previousSibling;
+                if (prev && prev.nodeType === Node.ELEMENT_NODE) {
+                    if (prev.classList.contains('inline-math')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.activateMathBubble(prev, 'end');
+                        return;
                     }
-                } else {
-                    newRange.setStart(parent, 0);
+                    if (prev.classList.contains('inline-graph')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.activateGraphBubble(prev, 'end');
+                        return;
+                    }
                 }
-                newRange.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(newRange);
-                return;
             }
 
             const currentBlock = this.getCurrentBlock(textEl);
             if (!currentBlock) return;
 
-            // 글머리 기호 내부인지 확인 (중첩 글머리가 있는 경우 가장 가까운 bullet-item 우선)
             let bulletNode = range.startContainer;
             if (bulletNode.nodeType === Node.TEXT_NODE) bulletNode = bulletNode.parentNode;
             const currentBullet = bulletNode?.closest?.('.bullet-item') ||
                 (currentBlock?.classList?.contains('bullet-item') ? currentBlock : currentBlock?.closest?.('.bullet-item'));
 
             if (currentBullet && textEl.contains(currentBullet)) {
-                const contentEl = currentBullet.querySelector('.bullet-content');
+                const contentEl = currentBullet.querySelector(':scope > .bullet-content');
                 if (contentEl) {
                     let currentP = bulletNode?.closest?.('p');
-                    if (currentP && !contentEl.contains(currentP)) currentP = null;
+                    if (currentP && currentP.parentNode !== contentEl) currentP = null;
 
-                    const firstP = contentEl.querySelector('p') || contentEl.firstElementChild;
+                    const firstP = contentEl.querySelector(':scope > p') || contentEl.firstElementChild;
                     const isFirstP = (!currentP || currentP === firstP);
 
                     if (isFirstP) {
-                        // 첫 번째 <p>의 맨 앞에서 Backspace: 기존처럼 글머리 기호 전체 해제
+                        // [규칙 5]: list의 첫 번째 문단 맨 앞에서 Backspace -> 글머리 삭제하고 일반 <p>로 복귀
                         if (this.isCaretAtStart(currentP || contentEl)) {
                             e.preventDefault();
                             e.stopPropagation();
                             this.removeBulletItem(currentBullet);
                             return;
                         }
-                    } else {
-                        // [사용자 요구사항]: 첫 번째가 아닌 <p>의 맨 앞에서 Backspace:
-                        // "그 문단부터 bullet-content 안의 마지막 문단까지 글머리 문단에서 빠져나와서 그냥 밖에 있는 <p>가 되는 거야."
-                        if (this.isCaretAtStart(currentP)) {
-                            e.preventDefault();
-                            e.stopPropagation();
+                    } else if (currentP && this.isCaretAtStart(currentP)) {
+                        // list 내부에서 Shift+Enter로 만든 두 번째 이후 <p>의 맨 앞에서 Backspace -> 이전 문단과 병합
+                        e.preventDefault();
+                        e.stopPropagation();
 
-                            // currentP부터 그 뒤의 모든 형제 노드들을 수집
-                            const movingNodes = [];
-                            let next = currentP;
-                            while (next) {
-                                const temp = next.nextSibling;
-                                movingNodes.push(next);
-                                next = temp;
+                        const prevElem = currentP.previousElementSibling;
+                        if (prevElem) {
+                            const targetPrev = prevElem.tagName === 'P' ? prevElem : this.getDeepestParagraph(prevElem, true);
+                            const isCurEmpty = (!currentP.textContent || currentP.textContent.replace(/\u200B/g, '').trim() === '') &&
+                                !currentP.querySelector('.inline-math, .inline-graph');
+
+                            if (isCurEmpty) {
+                                currentP.remove();
+                                this.focusBlock(targetPrev, false);
+                                return;
                             }
 
-                            // currentBullet 바로 뒤(바깥)로 순서대로 이동
-                            let insertRef = currentBullet;
-                            movingNodes.forEach(n => {
-                                insertRef.after(n);
-                                insertRef = n;
-                            });
-
-                            if (!contentEl.childNodes.length || contentEl.innerHTML.trim() === '') {
-                                contentEl.innerHTML = '<p><br></p>';
+                            const isPrevEmpty = (!targetPrev.textContent || targetPrev.textContent.replace(/\u200B/g, '').trim() === '') &&
+                                !targetPrev.querySelector('.inline-math, .inline-graph');
+                            if (isPrevEmpty && prevElem.tagName === 'P') {
+                                prevElem.remove();
+                                this.focusBlock(currentP, true);
+                                return;
                             }
 
-                            // 탈출한 currentP의 맨 앞에 포커스 유지 (여기서 한 번 더 백스페이스를 누르면 앞 블록과 병합됨)
-                            this.focusBlock(currentP, true);
+                            targetPrev.querySelectorAll('br').forEach(br => br.remove());
+                            const firstMoved = currentP.firstChild;
+                            while (currentP.firstChild) {
+                                targetPrev.appendChild(currentP.firstChild);
+                            }
+                            currentP.remove();
+                            this.cleanupDummyBrInParagraph(targetPrev);
+
+                            if (firstMoved) {
+                                if (firstMoved.nodeType === Node.TEXT_NODE) {
+                                    const r = document.createRange();
+                                    r.setStart(firstMoved, 0);
+                                    r.collapse(true);
+                                    sel.removeAllRanges();
+                                    sel.addRange(r);
+                                } else {
+                                    this.placeCaretBeforeNode(firstMoved);
+                                }
+                            } else {
+                                this.focusBlock(targetPrev, false);
+                            }
                             return;
                         }
                     }
@@ -3803,7 +3843,8 @@
             e.preventDefault();
             e.stopPropagation();
 
-            const isCurEmpty = (!currentBlock.textContent || currentBlock.textContent.trim() === '') && !currentBlock.querySelector('.inline-math, .inline-graph');
+            const isCurEmpty = (!currentBlock.textContent || currentBlock.textContent.replace(/\u200B/g, '').trim() === '') &&
+                !currentBlock.querySelector('.inline-math, .inline-graph');
             const targetPrev = this.getDeepestParagraph(prevBlock, true);
 
             if (isCurEmpty) {
@@ -3812,24 +3853,22 @@
                 return;
             }
 
-            const isPrevEmpty = (!targetPrev.textContent || targetPrev.textContent.trim() === '') && !targetPrev.querySelector('.inline-math, .inline-graph');
+            const isPrevEmpty = (!targetPrev.textContent || targetPrev.textContent.replace(/\u200B/g, '').trim() === '') &&
+                !targetPrev.querySelector('.inline-math, .inline-graph');
             if (isPrevEmpty && prevBlock.tagName === 'P') {
                 prevBlock.remove();
                 this.focusBlock(currentBlock, true);
                 return;
             }
 
-            if (targetPrev.childNodes.length === 1 && targetPrev.firstChild.nodeName === 'BR') {
-                targetPrev.innerHTML = '';
-            } else if (targetPrev.lastChild && targetPrev.lastChild.nodeName === 'BR') {
-                targetPrev.lastChild.remove();
-            }
+            targetPrev.querySelectorAll('br').forEach(br => br.remove());
 
             const firstMovedChild = currentBlock.firstChild;
             while (currentBlock.firstChild) {
                 targetPrev.appendChild(currentBlock.firstChild);
             }
             currentBlock.remove();
+            this.cleanupDummyBrInParagraph(targetPrev);
 
             if (firstMovedChild) {
                 if (firstMovedChild.nodeType === Node.TEXT_NODE) {
@@ -3852,25 +3891,6 @@
             const range = sel.getRangeAt(0);
             if (!range.collapsed) return;
 
-            // 0. 문단 내 soft break (<br>) 직전에서 Delete를 누른 경우: 해당 <br> 삭제
-            let nextNode = null;
-            if (range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === range.startContainer.length) {
-                nextNode = range.startContainer.nextSibling;
-            } else if (range.startContainer.nodeType === Node.ELEMENT_NODE && range.startOffset < range.startContainer.childNodes.length) {
-                nextNode = range.startContainer.childNodes[range.startOffset];
-            }
-
-            if (nextNode && nextNode.nodeType === Node.ELEMENT_NODE && nextNode.tagName.toLowerCase() === 'br') {
-                e.preventDefault();
-                e.stopPropagation();
-                const trailing = nextNode.nextSibling;
-                if (trailing && trailing.nodeType === Node.ELEMENT_NODE && trailing.classList?.contains('trailing-soft-br')) {
-                    trailing.remove();
-                }
-                nextNode.remove();
-                return;
-            }
-
             const currentBlock = this.getCurrentBlock(textEl);
             if (!currentBlock) return;
 
@@ -3886,22 +3906,22 @@
 
             const targetNext = this.getDeepestParagraph(nextBlock, false);
 
-            const isNextEmpty = (!targetNext.textContent || targetNext.textContent.trim() === '') && !targetNext.querySelector('.inline-math, .inline-graph');
+            const isNextEmpty = (!targetNext.textContent || targetNext.textContent.replace(/\u200B/g, '').trim() === '') &&
+                !targetNext.querySelector('.inline-math, .inline-graph');
 
             if (isNextEmpty) {
                 nextBlock.remove();
                 return;
             }
 
-            if (targetCurrent.childNodes.length === 1 && targetCurrent.firstChild.nodeName === 'BR') {
-                targetCurrent.innerHTML = '';
-            }
+            targetCurrent.querySelectorAll('br').forEach(br => br.remove());
 
             const firstMovedChild = targetNext.firstChild;
             while (targetNext.firstChild) {
                 targetCurrent.appendChild(targetNext.firstChild);
             }
             nextBlock.remove();
+            this.cleanupDummyBrInParagraph(targetCurrent);
 
             if (firstMovedChild) {
                 if (firstMovedChild.nodeType === Node.TEXT_NODE) {
@@ -3920,9 +3940,65 @@
             if (textEl._hasEditListeners) return;
             textEl._hasEditListeners = true;
 
-            textEl.addEventListener('keydown', (e) => {
+            // 이벤트 위임: 수식, 그래프, 글머리 마커 클릭 이벤트 통합 처리
+            textEl.addEventListener('click', (e) => {
+                if (!boxEl.classList.contains('is-editing')) return;
 
-                // 0. Tab / Shift+Tab 키: 문단 및 글머리 기호 들여쓰기(Tab: +1em) / 내어쓰기(Shift+Tab: -1em)
+                const mathSpan = e.target.closest('.inline-math');
+                if (mathSpan && textEl.contains(mathSpan)) {
+                    e.stopPropagation();
+                    this.activateMathBubble(mathSpan, 'end');
+                    return;
+                }
+
+                const graphSpan = e.target.closest('.inline-graph');
+                if (graphSpan && textEl.contains(graphSpan)) {
+                    e.stopPropagation();
+                    this.activateGraphBubble(graphSpan, 'end');
+                    return;
+                }
+
+                const markerEl = e.target.closest('.bullet-marker');
+                if (markerEl && textEl.contains(markerEl)) {
+                    e.stopPropagation();
+                    this.activateMarkerBubble(markerEl);
+                    return;
+                }
+            });
+
+            // 타이핑(input) 최적화: 전체 DOM 순회 대신 현재 커서 위치의 블록만 O(1) 검사
+            textEl.addEventListener('input', () => {
+                // 전체 삭제(Ctrl+A -> Backspace 등)로 인해 박스가 완전히 빈 경우 표준 블록 구조 복원
+                if (!textEl.children.length || textEl.innerHTML.trim() === '' || textEl.innerHTML.trim() === '<br>') {
+                    textEl.innerHTML = '<p><br></p>';
+                    this.placeCaretAtNodeStart(textEl.firstElementChild);
+                    return;
+                }
+
+                const sel = window.getSelection();
+                if (!sel || !sel.rangeCount) return;
+                let node = sel.anchorNode;
+                if (!node) return;
+                if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+
+                const currentP = node.closest ? node.closest('p') : null;
+                if (currentP && textEl.contains(currentP)) {
+                    const hasText = (currentP.textContent || '').replace(/\u200B/g, '').trim().length > 0;
+                    const hasInlineObj = !!currentP.querySelector('.inline-math, .inline-graph');
+                    if (hasText || hasInlineObj) {
+                        currentP.querySelectorAll('br').forEach(br => br.remove());
+                    }
+                }
+
+                const currentBc = node.closest ? node.closest('.bullet-content') : null;
+                if (currentBc && textEl.contains(currentBc)) {
+                    if (!currentBc.children.length) {
+                        currentBc.innerHTML = '<p><br></p>';
+                    }
+                }
+            });
+
+            textEl.addEventListener('keydown', (e) => {
                 if (e.key === 'Tab') {
                     e.preventDefault();
                     e.stopPropagation();
@@ -3930,7 +4006,6 @@
                     return;
                 }
 
-                // 0-1. Alt+Down / Alt+Up 키: 문단 및 글머리 기호 아래 여백 조절 (+0.25em / -0.25em, 범위: -2.0em ~ +2.0em)
                 if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
                     if (e.key === 'ArrowDown') {
                         e.preventDefault();
@@ -3946,7 +4021,6 @@
                     }
                 }
 
-                // 1. Shift+4 또는 $ 키: 수식 추가 트리거
                 if ((e.shiftKey && (e.code === 'Digit4' || e.key === '$')) || e.key === '$') {
                     e.preventDefault();
                     e.stopPropagation();
@@ -3954,7 +4028,6 @@
                     return;
                 }
 
-                // 2. ArrowRight: 수식 또는 그래프 바로 왼쪽에서 오른쪽 방향키 누르면 버블 진입 (start 위치)
                 if (e.key === 'ArrowRight') {
                     const nextMath = this.getNextSiblingInlineMath();
                     if (nextMath) {
@@ -3972,7 +4045,6 @@
                     }
                 }
 
-                // 3. ArrowLeft: 수식 또는 그래프 바로 오른쪽에서 왼쪽 방향키 누르면 버블 진입 (end 위치)
                 if (e.key === 'ArrowLeft') {
                     const prevMath = this.getPrevSiblingInlineMath();
                     if (prevMath) {
@@ -3990,41 +4062,35 @@
                     }
                 }
 
-                // 4. Enter 키: Shift+Enter(같은 문단 내 줄바꿈) vs Enter(새 문단 블록/새 글머리 기호)
+                // [규칙 1 & 규칙 3]:
+                // - 일반 문단: Shift+Enter든 Enter든 새로운 <p> 생성
+                // - list 내부: Shift+Enter는 list 안에서 새 <p> 생성, Enter는 다음 list(.bullet-item) 생성
                 if (e.key === 'Enter') {
-                    if (e.shiftKey) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        this.insertSoftLineBreakAtCaret(textEl);
-                        return;
-                    }
-
-                    const currentBullet = this.getCurrentBulletItem();
-                    if (currentBullet) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        this.handleBulletEnter(currentBullet);
-                        return;
-                    }
                     e.preventDefault();
                     e.stopPropagation();
-                    this.insertParagraphBreakAtCaret(textEl);
+                    const currentBullet = this.getCurrentBulletItem();
+                    if (currentBullet) {
+                        if (e.shiftKey) {
+                            this.handleBulletShiftEnter(currentBullet);
+                        } else {
+                            this.handleBulletEnter(currentBullet);
+                        }
+                    } else {
+                        this.insertParagraphBreakAtCaret(textEl);
+                    }
                     return;
                 }
 
-                // 4-2. Backspace 키: 글머리 기호 삭제 또는 이전 문단과의 병합/빈 문단 삭제
                 if (e.key === 'Backspace') {
                     this.handleBackspaceAtCaret(textEl, e);
                     return;
                 }
 
-                // 4-3. Delete 키: 문단 끝에서 다음 문단과의 병합
                 if (e.key === 'Delete') {
                     this.handleDeleteAtCaret(textEl, e);
                     return;
                 }
 
-                // 5. Esc: 편집 종료 및 커밋
                 if (e.key === 'Escape') {
                     e.preventDefault();
                     e.stopPropagation();
@@ -4032,7 +4098,6 @@
                     return;
                 }
 
-                // 6. 문단 정렬 단축키 (Ctrl+L: 왼쪽, Ctrl+E / Ctrl+C: 가운데, Ctrl+R: 오른쪽)
                 if ((e.ctrlKey || e.metaKey) && !e.altKey) {
                     const key = e.key.toLowerCase();
                     if (key === 'l') {
@@ -4055,7 +4120,6 @@
                     }
                 }
 
-                // 7. 서식 단축키 (Ctrl+B: 굵게, Ctrl+I: 기울임, Ctrl+U: 밑줄)
                 if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
                     const key = e.key.toLowerCase();
                     if (key === 'b') {
@@ -4079,7 +4143,6 @@
                 }
             });
 
-            // 붙여넣기 시 문단 블록(<p>) 구조에 맞게 순수 텍스트 줄바꿈 분할 삽입
             textEl.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const pasteText = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
@@ -4091,7 +4154,12 @@
                 } else {
                     for (let i = 0; i < lines.length; i++) {
                         if (i > 0) {
-                            this.insertParagraphBreakAtCaret(textEl);
+                            const currentBullet = this.getCurrentBulletItem();
+                            if (currentBullet) {
+                                this.handleBulletShiftEnter(currentBullet);
+                            } else {
+                                this.insertParagraphBreakAtCaret(textEl);
+                            }
                         }
                         if (lines[i]) {
                             document.execCommand('insertText', false, lines[i]);
@@ -4124,7 +4192,6 @@
             }
             const initialText = (item && item.text !== undefined) ? item.text : '';
 
-            // 편집 모드 진입 시 기존 렌더링된 자식이 없는 경우에만 초기 파싱 수행
             textEl.contentEditable = 'true';
             if (!textEl.childNodes.length) {
                 textEl.innerHTML = parseMathToHtml(initialText);
@@ -4172,7 +4239,6 @@
             const item = this.store.elementsMap.get(boxEl.id);
             if (item) {
                 item.text = newText;
-                // 중요: 편집 모드 해제 시 DOM(textEl.innerHTML)을 다시 파싱/재렌더링하여 변형하지 않고 그대로 유지
             }
 
             if (this.textEditingInitialSnapshot && this.historyManager) {
@@ -4636,8 +4702,18 @@
                     this.textEditor.deactivateMarkerBubble(true);
                 }
 
-                // 편집 중인 박스 바깥 클릭 시 편집 모드 커밋 및 종료 (수식 버블, 기호 버블 또는 컨텍스트 메뉴 클릭 시 유지)
-                if (this.textEditor.activeBox && !this.textEditor.activeBox.contains(e.target) && !e.target.closest('#math-mini-code-bubble, #marker-mini-bubble, #canvas-context-menu')) {
+                // 수식 버블 바깥 클릭 시 수식 확정 및 버블 닫기
+                if (this.textEditor.activeMathTarget && !e.target.closest('#math-mini-code-bubble, .inline-math')) {
+                    this.textEditor.deactivateMathBubble(true, 'none');
+                }
+
+                // 그래프 버블 바깥 클릭 시 그래프 확정 및 버블 닫기
+                if (this.textEditor.activeGraphTarget && !e.target.closest('#graph-mini-code-bubble, .inline-graph')) {
+                    this.textEditor.deactivateGraphBubble(true, 'none');
+                }
+
+                // 편집 중인 박스 바깥 클릭 시 편집 모드 커밋 및 종료 (수식 버블, 그래프 버블, 기호 버블 또는 컨텍스트 메뉴 클릭 시 유지)
+                if (this.textEditor.activeBox && !this.textEditor.activeBox.contains(e.target) && !e.target.closest('#math-mini-code-bubble, #graph-mini-code-bubble, #marker-mini-bubble, #canvas-context-menu')) {
                     this.textEditor.stopEditing(this.textEditor.activeBox);
                 }
 
@@ -5832,19 +5908,11 @@
 
         queueAutoSave(delay = 10000) {
             if (this.saveTimer) clearTimeout(this.saveTimer);
-
-            // 실제 내용 변경 여부 검증 (수정사항이 없으면 타이머 가동 안 함)
-            const currentData = this.getSerializedData();
-            const currentJson = JSON.stringify(currentData);
-            if (this.lastSavedJson && this.lastSavedJson === currentJson) {
-                this.isDirty = false;
-                return;
-            }
             this.isDirty = true;
 
             const config = this.getGitHubConfig();
             if (config) {
-                this.updateCloudStatus('syncing', '10초 후 GitHub 저장...');
+                this.updateCloudStatus('syncing', `${Math.round(delay / 1000)}초 후 GitHub 저장...`);
                 this.saveTimer = setTimeout(async () => {
                     await this.executeSave();
                 }, delay);
@@ -5861,6 +5929,7 @@
             const currentJson = JSON.stringify(currentData);
             if (this.lastSavedJson && this.lastSavedJson === currentJson) {
                 this.isDirty = false;
+                this.updateCloudStatus('synced', 'GitHub 동기화됨');
                 return;
             }
 
