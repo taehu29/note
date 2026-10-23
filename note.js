@@ -2636,13 +2636,8 @@
                 let currentP = node?.closest?.('p');
                 if (currentP && currentP.parentNode !== contentEl) currentP = null;
 
-                let parentMarker = currentBullet.querySelector(':scope > .bullet-marker')?.textContent?.trim() || '•';
-                let subMarker = '◦';
-                if (parentMarker === '◦') subMarker = '▪';
-                else if (parentMarker === '▪') subMarker = '-';
-                else if (/^\d+\./.test(parentMarker)) subMarker = '(1)';
-
-                const newSubBullet = this.createBulletItemElement(subMarker, '<p><br></p>');
+                // 글머리 기호의 수준(depth)과 상관없이 항상 기본 item은 기본 bullet('•')으로 통일
+                const newSubBullet = this.createBulletItemElement('•', '<p><br></p>');
 
                 if (currentP) {
                     const isPEmpty = (!currentP.textContent || currentP.textContent.replace(/\u200B/g, '').trim() === '') &&
@@ -4106,7 +4101,7 @@
                         this.applyAlignment('left');
                         return;
                     }
-                    if (key === 'e' || key === 'c') {
+                    if (key === 'e') {
                         e.preventDefault();
                         e.stopPropagation();
                         this.applyAlignment('center');
