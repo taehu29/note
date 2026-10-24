@@ -45,8 +45,8 @@
       "left": 44,
       "top": 152,
       "width": 36,
-      "height": 6,
-      "contents": "<p>Category $\\mathbf{Cat}, \\mathbf{CAT}$을</p><p>$\\mathrm{Ob}(\\mathbf{Cat})$ : small categories,$\\qquad \\mathrm{Mor}(\\mathbf{Cat})$ : functors</p><p>$\\mathrm{Ob}(\\mathbf{CAT})$</p><p><br></p>"
+      "height": 11,
+      "contents": "<p style=\"margin-bottom: 0.5em;\">Category $\\mathbf{Cat}, \\mathbf{CAT}$을</p><p style=\"padding-left: 2em;\">$\\mathrm{Ob}(\\mathbf{Cat})$ : small categories,$\\mkern99mu \\mathrm{Mor}(\\mathbf{Cat})$ : functors</p><p style=\"padding-left: 2em; margin-bottom: 0.5em;\">$\\mathrm{Ob}(\\mathbf{CAT})$ : locally small categories,$\\qquad \\mathrm{Mor}(\\mathbf{Cat})$ : functors</p><p>으로 정의하면</p><p><br></p>"
     }
   ],
   "lines": [
