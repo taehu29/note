@@ -54,7 +54,7 @@
       "top": 180,
       "width": 36,
       "height": 9,
-      "contents": "<p style=\"margin-bottom: 0.5em;\">Functor $F \\colon \\mathcal{C} \\to \\mathcal{D},\\;G \\colon \\mathcal{D} \\to \\mathcal{C}$에 대하여 natural isomorphisms</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\eta \\colon \\mathrm{id}_{\\mathcal{C}} \\overset{\\cong}{\\Rightarrow} GF,\\quad \\varepsilon \\colon F\\:\\!G \\overset{\\cong}{\\Rightarrow} \\mathrm{id}_{\\mathcal{D}}$</p><p>를 <b>equivalence</b> of categories라 한다. </p>"
+      "contents": "<p style=\"margin-bottom: 0.5em;\">Functor $F \\colon \\mathcal{C} \\to \\mathcal{D},\\;G \\colon \\mathcal{D} \\to \\mathcal{C}$에 대하여 natural isomorphisms</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\eta \\colon \\mathrm{id}_{\\mathcal{C}} \\overset{\\cong}{\\Rightarrow} GF,\\quad \\varepsilon \\colon F\\:\\!G \\overset{\\cong}{\\Rightarrow} \\mathrm{id}_{\\mathcal{D}}$</p><p>를 <b>equivalence</b> of categories라 한다. 두 category $\\mathcal{C},\\mathcal{D}$ 사이에 equivalence가 존재하면 $\\mathcal{C},\\mathcal{D}$를 equivalent </p>"
     }
   ],
   "lines": [
