@@ -808,11 +808,16 @@
             html = parseLegacyLatexToCleanHtml(rawText);
         }
 
-        // 2. TikZ 그래프 블록 (\begin{tikzpicture}...\end{tikzpicture}) 렌더링
+        // 2. TikZ 그래프 블록 (\begin{tikzpicture}...\end{tikzpicture}) 렌더링 및 임시 토큰 마스킹
+        // (data-tikz 속성이나 SVG 내부의 $...$가 아래 수식 정규식에 의해 속성 따옴표가 파괴되는 현상 원천 차단!)
+        const tikzBlocks = [];
         html = html.replace(/\\begin\{tikzpicture\}([\s\S]*?)\\end\{tikzpicture\}/gi, (match, body) => {
             const cleanTikz = unescapeHtmlEntities(body).trim();
             const rendered = renderTikzToHtml(cleanTikz);
-            return `<span class="inline-graph" data-tikz="${escapeHtmlAttr(cleanTikz)}" contenteditable="false">${rendered.trim()}</span>`;
+            const graphHtml = `<span class="inline-graph" data-tikz="${escapeHtmlAttr(cleanTikz)}" contenteditable="false">${rendered.trim()}</span>`;
+            const token = `___TIKZ_GRAPH_BLOCK_${tikzBlocks.length}___`;
+            tikzBlocks.push(graphHtml);
+            return token;
         });
 
         // 3. 수식 블록 ($$...$$, \[...\], $...$) 렌더링
@@ -828,6 +833,11 @@
             const cleanMath = unescapeHtmlEntities(math).trim();
             const rendered = renderLatexToHtml(cleanMath, false);
             return `<span class="inline-math" data-latex="${escapeHtmlAttr(cleanMath)}" contenteditable="false">${rendered}</span>`;
+        });
+
+        // 4. 마스킹했던 TikZ 그래프 블록 안전하게 복원
+        tikzBlocks.forEach((graphHtml, idx) => {
+            html = html.split(`___TIKZ_GRAPH_BLOCK_${idx}___`).join(graphHtml);
         });
 
         return html || '<p><br></p>';
@@ -851,6 +861,14 @@
             .replace(/<(?:strong|b)>(.*?)<\/(?:strong|b)>/gi, '<b>$1</b>')
             .replace(/<(?:em|i)>(.*?)<\/(?:em|i)>/gi, '<i>$1</i>')
             .replace(/<u>(.*?)<\/u>/gi, '<u>$1</u>');
+
+        // 1.5. TikZ 블록 마스킹 (줄바꿈 <br> 치환 및 문단 분할 시 TikZ 코드가 라인별로 찢어지는 현상 방지)
+        const legacyTikzBlocks = [];
+        text = text.replace(/\\begin\{tikzpicture\}([\s\S]*?)\\end\{tikzpicture\}/gi, (match) => {
+            const token = `___LEGACY_TIKZ_BLOCK_${legacyTikzBlocks.length}___`;
+            legacyTikzBlocks.push(match);
+            return token;
+        });
 
         // 2. 수식 마스킹 (LaTeX 환경 파싱 중 특수문자 및 옵션 충돌 방지)
         const mathTokens = [];
@@ -984,6 +1002,11 @@
         // 마스킹했던 수식 복원
         mathTokens.forEach((m, idx) => {
             resultHtml = resultHtml.split(`___MATH_TOKEN_${idx}___`).join(m);
+        });
+
+        // 마스킹했던 TikZ 블록 복원
+        legacyTikzBlocks.forEach((tikz, idx) => {
+            resultHtml = resultHtml.split(`___LEGACY_TIKZ_BLOCK_${idx}___`).join(tikz);
         });
 
         return resultHtml;
