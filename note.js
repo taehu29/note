@@ -119,7 +119,9 @@
     }
 
     function applyEnvValignToKaTeXHtml(html, alignments) {
-        if (!alignments || alignments.length === 0 || typeof document === 'undefined') return html;
+        if (!alignments || !alignments.some(a => a.pos === 't' || a.pos === 'b') || typeof document === 'undefined') {
+            return html;
+        }
 
         const temp = document.createElement('div');
         temp.innerHTML = html;
@@ -127,55 +129,94 @@
         const mtables = temp.querySelectorAll('.mtable');
         mtables.forEach((mtable, idx) => {
             const alignInfo = alignments[idx];
-            if (!alignInfo) return;
+            if (!alignInfo || (alignInfo.pos !== 't' && alignInfo.pos !== 'b')) return;
 
             const { pos } = alignInfo;
             mtable.setAttribute('data-valign', pos);
 
-            // [c]는 가운데 정렬이므로 기본 상태 유지
-            if (pos === 'c') return;
+            const cols = mtable.querySelectorAll(':scope > [class*="col-align-"]');
+            let pstrutH = 3.0; // KaTeX 기본 3.0em
+            let minRowTop = Infinity;  // 첫 번째 줄의 top (가장 작은 음수 값)
+            let maxRowTop = -Infinity; // 마지막 줄의 top (가장 큰 값)
 
-            // pstrut 높이 추출 (KaTeX 기본 3.0em)
-            const pstrutEl = mtable.querySelector('.pstrut');
-            const pstrutH = pstrutEl && pstrutEl.style.height ? parseFloat(pstrutEl.style.height) || 3.0 : 3.0;
+            cols.forEach(col => {
+                const vlistT = col.querySelector(':scope > .vlist-t2, :scope > .vlist-t');
+                if (!vlistT) return;
 
-            // 각 행의 기준선 top 위치 추출
-            let minRowTop = Infinity;  // 첫 번째 행 (가장 위쪽, 가장 작은 음수 값)
-            let maxRowTop = -Infinity; // 마지막 행 (가장 아래쪽, 가장 큰 값)
+                const mainVlist = vlistT.querySelector(':scope > .vlist-r:first-child > .vlist');
+                if (!mainVlist) return;
 
-            const rows = mtable.querySelectorAll('.col-align-r .vlist > span, .col-align-l .vlist > span, .col-align-c .vlist > span');
-            rows.forEach(r => {
-                if (r.style && r.style.top) {
-                    const topVal = parseFloat(r.style.top);
-                    if (!isNaN(topVal)) {
-                        if (topVal < minRowTop) minRowTop = topVal;
-                        if (topVal > maxRowTop) maxRowTop = topVal;
+                const pstrut = mainVlist.querySelector('.pstrut');
+                if (pstrut && pstrut.style.height) {
+                    const h = parseFloat(pstrut.style.height);
+                    if (!isNaN(h)) pstrutH = h;
+                }
+
+                Array.from(mainVlist.children).forEach(rowWrapper => {
+                    if (rowWrapper.style && rowWrapper.style.top) {
+                        const topVal = parseFloat(rowWrapper.style.top);
+                        if (!isNaN(topVal)) {
+                            if (topVal < minRowTop) minRowTop = topVal;
+                            if (topVal > maxRowTop) maxRowTop = topVal;
+                        }
                     }
+                });
+            });
+
+            if (!isFinite(minRowTop) || !isFinite(maxRowTop)) return;
+
+            // shiftEm > 0 이면 수식이 아래로 내려감 ([t]), shiftEm < 0 이면 수식이 위로 올라감 ([b])
+            const shiftEm = pos === 't' ? -(minRowTop + pstrutH) : -(maxRowTop + pstrutH);
+            if (Math.abs(shiftEm) < 1e-4) return;
+
+            // 1. 각 열(Column) 내부의 실제 박스 높이(Ascent)와 깊이(Depth)를 직접 재조정 (상단/하단 빈 여백 완전 제거)
+            cols.forEach(col => {
+                const vlistT = col.querySelector(':scope > .vlist-t2, :scope > .vlist-t');
+                if (!vlistT) return;
+
+                const mainVlist = vlistT.querySelector(':scope > .vlist-r:first-child > .vlist');
+                const depthVlist = vlistT.querySelector(':scope > .vlist-r:nth-child(2) > .vlist');
+
+                if (mainVlist && mainVlist.style.height) {
+                    const origAscent = parseFloat(mainVlist.style.height) || 0;
+                    // [t]일 때 상단 높이를 첫 줄 높이(origAscent - shiftEm)로 즉시 축소
+                    const newAscent = Math.max(0, origAscent - shiftEm);
+                    mainVlist.style.height = `${newAscent.toFixed(4)}em`;
+
+                    // 내부 행들의 좌표도 축소된 mainVlist 높이에 맞춰 이동
+                    Array.from(mainVlist.children).forEach(rowWrapper => {
+                        if (rowWrapper.style && rowWrapper.style.top) {
+                            const origTop = parseFloat(rowWrapper.style.top);
+                            if (!isNaN(origTop)) {
+                                rowWrapper.style.top = `${(origTop + shiftEm).toFixed(4)}em`;
+                            }
+                        }
+                    });
+                }
+
+                if (depthVlist && depthVlist.style.height) {
+                    const origDepth = parseFloat(depthVlist.style.height) || 0;
+                    // [t]일 때 내려간 만큼 하단 깊이를 늘리고, [b]일 때 하단 깊이를 축소
+                    const newDepth = Math.max(0, origDepth + shiftEm);
+                    depthVlist.style.height = `${newDepth.toFixed(4)}em`;
                 }
             });
 
-            if (isFinite(minRowTop) && isFinite(maxRowTop)) {
-                let shiftEm = 0;
-                if (pos === 't') {
-                    shiftEm = -(minRowTop + pstrutH);
-                } else if (pos === 'b') {
-                    shiftEm = -(maxRowTop + pstrutH);
-                }
+            // 2. 외부 .base의 .strut 높이(total height)와 vertical-align(depth) 동기화
+            const base = mtable.closest('.base');
+            if (base) {
+                const strut = base.querySelector(':scope > .strut');
+                if (strut && strut.style) {
+                    const origTotalH = parseFloat(strut.style.height) || 0;
+                    const origValign = parseFloat(strut.style.verticalAlign) || 0; // 음수값 (-depth)
+                    const origAscent = origTotalH + origValign;
+                    const origDepth = -origValign;
 
-                mtable.style.position = 'relative';
-                mtable.style.top = `${shiftEm.toFixed(4)}em`;
+                    const newAscent = Math.max(0.7, origAscent - shiftEm);
+                    const newDepth = Math.max(0, origDepth + shiftEm);
 
-                // KaTeX strut(행 높이/깊이 예약 요소)의 vertical-align을 함께 보정하여
-                // 위/아래 텍스트 라인과의 겹침(Collision) 완벽 방지
-                const base = mtable.closest('.base');
-                if (base) {
-                    const strut = base.querySelector(':scope > .strut');
-                    if (strut && strut.style.verticalAlign) {
-                        const currentVa = parseFloat(strut.style.verticalAlign);
-                        if (!isNaN(currentVa)) {
-                            strut.style.verticalAlign = `${(currentVa - shiftEm).toFixed(4)}em`;
-                        }
-                    }
+                    strut.style.height = `${(newAscent + newDepth).toFixed(4)}em`;
+                    strut.style.verticalAlign = `${(-newDepth).toFixed(4)}em`;
                 }
             }
         });
