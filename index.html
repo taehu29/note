@@ -802,15 +802,30 @@
             font-size: 1.08em;
         }
 
+        /* [추가 1] 수식 내부 \text{} 로 입력한 텍스트 크기를 본문 기준 1em으로 고정 (부모 .katex가 1.08em이므로 역수 적용) */
+        .inline-math .katex .mord.text {
+            font-size: calc(1em / 1.08);
+        }
+
+        /* 중첩된 \text{}가 추가로 축소되지 않도록 방지 */
+        .inline-math .katex .mord.text .mord.text {
+            font-size: 1em;
+        }
+
+        /* 디스플레이 수식 등 1em 기준일 때 */
+        .katex-display .katex .mord.text {
+            font-size: 1em;
+        }
+
         /* KaTeX 디스플레이 수식(\[...\], $$...$$) 위아래 여백 조정 */
         .katex-display {
             margin: 0.5em 0 !important;
         }
 
-        /* aligned, gathered 환경 (array 제외): 수식 내부 표(.mtable)를 아래로 내려 괄호(\bigg\{ 등)와 수직 중심 완벽 일치 */
-        .katex-display.katex-multiline-env .mtable,
-        .katex.katex-multiline-env .mtable,
-        .katex .mtable:not(:has(.arraycolsep)) {
+        /* [수정 2] aligned, gathered 환경: [t], [b] 수직 정렬 옵션이 없을 때만 기본 중앙 보정(top: 0.2em) 적용 */
+        .katex-display.katex-multiline-env .mtable:not([data-valign="t"]):not([data-valign="b"]),
+        .katex.katex-multiline-env .mtable:not([data-valign="t"]):not([data-valign="b"]),
+        .katex .mtable:not(:has(.arraycolsep)):not([data-valign="t"]):not([data-valign="b"]) {
             position: relative;
             top: 0.2em;
         }

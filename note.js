@@ -98,6 +98,91 @@
             .replace(/&#39;/g, "'");
     }
 
+    // =========================================================================
+    // KaTeX 환경(\begin{aligned}[t] 등) 수직 정렬([t], [b], [c]) 전/후처리 유틸리티
+    // =========================================================================
+    const TABLE_ENV_REGEX = /\\begin\{(aligned|alignedat|gathered|array|matrix|pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|smallmatrix|cases|rcases|dcases)\}(?:\s*\[([tbc])\])?/g;
+
+    function extractEnvValign(latex) {
+        if (!latex) return { cleanedLatex: '', alignments: [], hasValignOption: false };
+        const alignments = [];
+        let hasValignOption = false;
+        const cleanedLatex = latex.replace(TABLE_ENV_REGEX, (match, envName, pos) => {
+            const val = pos || 'c';
+            if (val === 't' || val === 'b') {
+                hasValignOption = true;
+            }
+            alignments.push({ envName, pos: val });
+            return `\\begin{${envName}}`;
+        });
+        return { cleanedLatex, alignments, hasValignOption };
+    }
+
+    function applyEnvValignToKaTeXHtml(html, alignments) {
+        if (!alignments || alignments.length === 0 || typeof document === 'undefined') return html;
+
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        const mtables = temp.querySelectorAll('.mtable');
+        mtables.forEach((mtable, idx) => {
+            const alignInfo = alignments[idx];
+            if (!alignInfo) return;
+
+            const { pos } = alignInfo;
+            mtable.setAttribute('data-valign', pos);
+
+            // [c]는 가운데 정렬이므로 기본 상태 유지
+            if (pos === 'c') return;
+
+            // pstrut 높이 추출 (KaTeX 기본 3.0em)
+            const pstrutEl = mtable.querySelector('.pstrut');
+            const pstrutH = pstrutEl && pstrutEl.style.height ? parseFloat(pstrutEl.style.height) || 3.0 : 3.0;
+
+            // 각 행의 기준선 top 위치 추출
+            let minRowTop = Infinity;  // 첫 번째 행 (가장 위쪽, 가장 작은 음수 값)
+            let maxRowTop = -Infinity; // 마지막 행 (가장 아래쪽, 가장 큰 값)
+
+            const rows = mtable.querySelectorAll('.col-align-r .vlist > span, .col-align-l .vlist > span, .col-align-c .vlist > span');
+            rows.forEach(r => {
+                if (r.style && r.style.top) {
+                    const topVal = parseFloat(r.style.top);
+                    if (!isNaN(topVal)) {
+                        if (topVal < minRowTop) minRowTop = topVal;
+                        if (topVal > maxRowTop) maxRowTop = topVal;
+                    }
+                }
+            });
+
+            if (isFinite(minRowTop) && isFinite(maxRowTop)) {
+                let shiftEm = 0;
+                if (pos === 't') {
+                    shiftEm = -(minRowTop + pstrutH);
+                } else if (pos === 'b') {
+                    shiftEm = -(maxRowTop + pstrutH);
+                }
+
+                mtable.style.position = 'relative';
+                mtable.style.top = `${shiftEm.toFixed(4)}em`;
+
+                // KaTeX strut(행 높이/깊이 예약 요소)의 vertical-align을 함께 보정하여
+                // 위/아래 텍스트 라인과의 겹침(Collision) 완벽 방지
+                const base = mtable.closest('.base');
+                if (base) {
+                    const strut = base.querySelector(':scope > .strut');
+                    if (strut && strut.style.verticalAlign) {
+                        const currentVa = parseFloat(strut.style.verticalAlign);
+                        if (!isNaN(currentVa)) {
+                            strut.style.verticalAlign = `${(currentVa - shiftEm).toFixed(4)}em`;
+                        }
+                    }
+                }
+            }
+        });
+
+        return temp.innerHTML;
+    }
+
     function prepareLatexForRender(latex, isDisplay = false) {
         if (!latex) return '';
         if (isDisplay) return latex;
@@ -121,18 +206,26 @@
         let result = '';
         if (typeof katex !== 'undefined') {
             try {
-                const expr = prepareLatexForRender(latex, isDisplay);
+                // 1. [t], [b], [c] 옵션 추출 및 KaTeX 파서용 정리
+                const { cleanedLatex, alignments, hasValignOption } = extractEnvValign(latex);
+                const expr = prepareLatexForRender(cleanedLatex, isDisplay);
+
                 result = katex.renderToString(expr, {
                     displayMode: isDisplay,
                     throwOnError: false,
                     trust: true
                 });
 
-                // aligned 및 gathered 환경 식별 (array 제외하여 수직 중심 보정 클래스 부여)
-                const hasAlignedOrGathered = /\\begin\{(?:aligned|gathered)\}/.test(expr);
+                // 2. aligned 및 gathered 환경 식별 (array 제외하여 수직 중심 보정 클래스 부여)
+                const hasAlignedOrGathered = /\\begin\{(?:aligned|alignedat|gathered)\}/.test(expr);
                 const hasArray = /\\begin\{array\}/.test(expr);
                 if (hasAlignedOrGathered && !hasArray) {
                     result = result.replace(/class="([^"]*katex[^"]*)"/, 'class="$1 katex-multiline-env"');
+                }
+
+                // 3. 추출된 [t], [b] 수직 정렬 계산 및 적용 (옵션이 있을 때만 실행)
+                if (hasValignOption) {
+                    result = applyEnvValignToKaTeXHtml(result, alignments);
                 }
             } catch (e) {
                 console.error('KaTeX render error:', e);
@@ -2145,18 +2238,7 @@
 
             if (typeof katex !== 'undefined') {
                 try {
-                    const expr = prepareLatexForRender(latex, false);
-                    let rendered = katex.renderToString(expr, {
-                        displayMode: false,
-                        throwOnError: false,
-                        trust: true
-                    });
-                    const hasAlignedOrGathered = /\\begin\{(?:aligned|gathered)\}/.test(expr);
-                    const hasArray = /\\begin\{array\}/.test(expr);
-                    if (hasAlignedOrGathered && !hasArray) {
-                        rendered = rendered.replace(/class="([^"]*katex[^"]*)"/, 'class="$1 katex-multiline-env"');
-                    }
-                    target.innerHTML = rendered;
+                    target.innerHTML = renderLatexToHtml(latex, false);
                 } catch (err) {
                     target.textContent = `$${latex}$`;
                 }
