@@ -619,7 +619,7 @@
                     const fontSize = isPathNode ? '0.9em' : '1em';
                     svgElements.push(`
                     <foreignObject x="${finalX - 60}" y="${finalY - 20}" width="120" height="40" style="overflow:visible; pointer-events:none;">
-                        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; justify-content:center; align-items:center; width:100%; height:100%; font-size:${fontSize}; color:${stroke === 'currentColor' ? 'var(--color-z)' : stroke}; line-height:1; font-family:'Pretendard',serif;">
+                        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex; justify-content:center; align-items:center; width:100%; height:100%; font-size:${fontSize}; color:${stroke === 'currentColor' ? 'var(--color-z)' : stroke}; line-height:1; font-family:'KyoboHand','교보손글씨 2019',serif;">
                             ${processedLabel}
                         </div>
                     </foreignObject>`);
