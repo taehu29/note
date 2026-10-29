@@ -69,8 +69,8 @@
       "left": 4,
       "top": 236,
       "width": 36,
-      "height": 9,
-      "contents": "<p>(Locally small) Category $\\mathcal{C}$에 대하여 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$이</p><p><br></p>"
+      "height": 11,
+      "contents": "<p>(Locally small) Category $\\mathcal{C}$에 대하여 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$이</p><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(-,A) \\overset{\\cong}{\\Longrightarrow} F$</p><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(A,-) \\overset{\\cong}{\\Longrightarrow} G$</p><p>를 만족하면 $F$를 representable functor라 한다. 이 때 natural isomorphism $\\Phi$를 representation of $F$라 하고, $A$를 universal object for $F$라 한다. 또한 Yoneda lemma에 의하여 $\\Phi$에 대응되는 $u \\in F(A)$를 universal element라 한다.</p>"
     }
   ],
   "lines": [
