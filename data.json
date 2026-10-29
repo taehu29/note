@@ -58,11 +58,11 @@
     },
     {
       "id": "bdyniee",
-      "left": 2,
-      "top": 197,
-      "width": 40,
+      "left": 4,
+      "top": 208,
+      "width": 36,
       "height": 17,
-      "contents": ""
+      "contents": "<p>(Locally small) Category $\\mathcal{C}$와 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$에 대하여</p>"
     }
   ],
   "lines": [
