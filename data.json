@@ -57,20 +57,20 @@
       "contents": "<p style=\"margin-bottom: 0.5em;\">Functor $F \\colon \\mathcal{C} \\to \\mathcal{D},\\;G \\colon \\mathcal{D} \\to \\mathcal{C}$에 대하여 natural isomorphisms</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\eta \\colon \\mathrm{id}_{\\mathcal{C}} \\overset{\\cong}{\\Rightarrow} GF,\\quad \\varepsilon \\colon F\\:\\!G \\overset{\\cong}{\\Rightarrow} \\mathrm{id}_{\\mathcal{D}}$</p><p style=\"margin-bottom: 1em;\">이 존재하면 $F$를 <b>equivalence</b> of categories라 한다. 두 category $\\mathcal{C},\\mathcal{D}$ 사이에 equivalence가 존재하면, $\\mathcal{C},\\mathcal{D}$를 equivalent하다고 하며 $\\mathcal{C} \\simeq \\mathcal{D}$로 표시한다. Isomorphism (in $\\mathbf{CAT}$)은 당연히 equivalence이다.</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>$F$는 equivalence $\\iff \\begin{aligned}[t] &amp; F \\text{ is fully faithful} \\\\ &amp; \\forall B \\in \\mathrm{Ob}(\\mathcal{D}),\\;\\ \\exists A \\in \\mathrm{Ob}(\\mathcal{C}),\\; B \\cong F(A) \\end{aligned}$</p></div></div>"
     },
     {
-      "id": "bdyniee",
-      "left": 4,
-      "top": 208,
-      "width": 36,
-      "height": 26,
-      "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$와 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$에 대하여</p><p style=\"text-align: center;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(-,A),F) \\cong F(A)$</p><p style=\"text-align: center; margin-bottom: 0.25em;\">$\\big(\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(A,-),G) \\cong G(A)\\big)$</p><p style=\"margin-bottom: 0.5em;\">이며, 이 때</p><p style=\"text-align: center;\">$\\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,-),F) \\Rightarrow F(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,A),-) \\Rightarrow -(A)$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big(\\mathrm{Hom}(\\mathrm{Hom}(-,\\,\\cdot\\,),G) \\Rightarrow G(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(A,\\,\\cdot\\,),-) \\Rightarrow -(A)\\big)$</p><p style=\"margin-bottom: 1em;\">는 natural isomorphism이다. [<i>Yoneda Lemma</i>]</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">Functors</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\,\\cdot\\,,-) \\colon \\mathcal{C} \\to \\mathbf{Set}^{\\mathcal{C}^{\\mathrm{op}}}, &amp; A \\mapsto \\mathrm{Hom}(A,-) \\\\[-0.25em] \\mathrm{Hom}(-,\\,\\cdot\\,) \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set}^{\\mathcal{C}}, &amp; A \\mapsto \\mathrm{Hom}(-,A)\\end{gathered}$</p><p style=\"margin-bottom: 0.25em;\">를 <b>Yoneda embedding</b>이라 하며, Yoneda lemma에 의하여</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\mathrm{Hom}(-,A),\\mathrm{Hom}(-,B)) \\cong \\mathrm{Hom}(A,B) \\\\[-0.25em] \\mathrm{Hom}(\\mathrm{Hom}(A,-),\\mathrm{Hom}(B,-)) \\cong \\mathrm{Hom}(B,A) \\end{gathered}$</p><p>가 성립한다</p></div></div>"
-    },
-    {
       "id": "bknmasi",
       "left": 4,
-      "top": 236,
+      "top": 205,
       "width": 36,
       "height": 11,
       "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$에 대하여 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$이</p><p style=\"text-align: center;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(-,A) \\overset{\\cong}{\\Longrightarrow} F$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big(\\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(A,-) \\overset{\\cong}{\\Longrightarrow} G\\big)$</p><p>를 만족하면 $F$를 <b>representable functor</b>라 한다. 이 때 natural isomorphism $\\Phi$를 <b>representation</b> of $F$라 하고, $A$를 <b>universal object</b> for $F$라 한다. 또한 Yoneda lemma에 의하여 $\\Phi$에 대응되는 $u \\in F(A)$를 <b>universal element</b>라 한다.</p>"
+    },
+    {
+      "id": "bdyniee",
+      "left": 5,
+      "top": 218,
+      "width": 36,
+      "height": 26,
+      "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$와 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$에 대하여</p><p style=\"text-align: center;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(-,A),F) \\cong F(A)$</p><p style=\"text-align: center; margin-bottom: 0.25em;\">$\\big(\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(A,-),G) \\cong G(A)\\big)$</p><p style=\"margin-bottom: 0.5em;\">이며, 이 때</p><p style=\"text-align: center;\">$\\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,-),F) \\Rightarrow F(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,A),-) \\Rightarrow -(A)$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big(\\mathrm{Hom}(\\mathrm{Hom}(-,\\,\\cdot\\,),G) \\Rightarrow G(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(A,\\,\\cdot\\,),-) \\Rightarrow -(A)\\big)$</p><p style=\"margin-bottom: 1em;\">는 natural isomorphism이다. [<i>Yoneda Lemma</i>]</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">Functors</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\,\\cdot\\,,-) \\colon \\mathcal{C} \\to \\mathbf{Set}^{\\mathcal{C}^{\\mathrm{op}}}, &amp; A \\mapsto \\mathrm{Hom}(A,-) \\\\[-0.25em] \\mathrm{Hom}(-,\\,\\cdot\\,) \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set}^{\\mathcal{C}}, &amp; A \\mapsto \\mathrm{Hom}(-,A)\\end{gathered}$</p><p style=\"margin-bottom: 0.25em;\">를 <b>Yoneda embedding</b>이라 하며, Yoneda lemma에 의하여</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\mathrm{Hom}(-,A),\\mathrm{Hom}(-,B)) \\cong \\mathrm{Hom}(A,B) \\\\[-0.25em] \\mathrm{Hom}(\\mathrm{Hom}(A,-),\\mathrm{Hom}(B,-)) \\cong \\mathrm{Hom}(B,A) \\end{gathered}$</p><p>가 성립한다</p></div></div>"
     }
   ],
   "lines": [
@@ -152,31 +152,31 @@
       "height": 0
     },
     {
-      "id": "lgmrjy6",
-      "left": 2,
-      "top": 208,
-      "width": 0,
-      "height": 28
-    },
-    {
       "id": "ld22joy",
       "left": 2,
-      "top": 208,
+      "top": 205,
       "width": 0,
-      "height": -51
-    },
-    {
-      "id": "lwv22pl",
-      "left": 4,
-      "top": 208,
-      "width": -2,
-      "height": 0
+      "height": -48
     },
     {
       "id": "lgz131q",
       "left": 2,
-      "top": 236,
+      "top": 205,
       "width": 2,
+      "height": 0
+    },
+    {
+      "id": "lgmrjy6",
+      "left": 2,
+      "top": 218,
+      "width": 0,
+      "height": -13
+    },
+    {
+      "id": "lwv22pl",
+      "left": 6,
+      "top": 218,
+      "width": -4,
       "height": 0
     },
     {
