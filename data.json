@@ -102,7 +102,7 @@
       "top": 279,
       "width": 36,
       "height": 20,
-      "contents": "<p>Functor $D \\colon \\mathcal{J} \\to \\mathcal{C}$</p>"
+      "contents": "<p style=\"margin-bottom: 0.5em;\">Small category $\\mathcal{J}$에 대하여 functor $D \\colon \\mathcal{J} \\to \\mathcal{C}$를 $\\mathcal{J}$-<b>diagram</b>이라 하며, 이 때 $\\mathcal{J}$를 <i>index category</i>라 한다. $\\mathcal{J}$-diagram $D$와 <i>constant functor</i></p><p style=\"text-align: center;\">$\\Delta \\colon \\mathcal{C} \\to \\mathcal{C}^{\\mathcal{J}},\\quad \\begin{array}{ccc} A &amp;&amp; (X \\mapsto A) \\\\[-0.1em] {\\scriptstyle f}\\!\\downarrow\\mkern8mu &amp; \\mapsto &amp; \\mkern24mu\\downarrow{\\scriptstyle f \\circ -} \\\\ B &amp;&amp; (X \\mapsto B)\\end{array}$</p><p>에 대하여</p>"
     }
   ],
   "lines": [
