@@ -59,23 +59,23 @@
     {
       "id": "b6r6v00",
       "left": 4,
-      "top": 199,
+      "top": 200,
       "width": 36,
-      "height": 5,
-      "contents": "<p>$U \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon U \\to A$를 만족하면, $U$를 <b>initial object</b>라 한다.</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to U$를 만족하면, $U$를 <b>terminal object</b>라 한다.</p></div></div>"
+      "height": 6,
+      "contents": "<p style=\"margin-bottom: 0.25em;\">$U \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon U \\to A$를 만족하면, $U$를 <b>initial object</b>라 한다.</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to U$를 만족하면, $U$를 <b>terminal object</b>라 한다.</p></div></div>"
     },
     {
       "id": "bknmasi",
       "left": 4,
-      "top": 206,
+      "top": 208,
       "width": 36,
       "height": 11,
       "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$에 대하여 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$이</p><p style=\"text-align: center;\">$\\exists A \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(-,A) \\overset{\\cong}{\\Longrightarrow} F$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[\\exists A \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(A,-) \\overset{\\cong}{\\Longrightarrow} G\\big]$</p><p>를 만족하면 $F$를 <b>representable functor</b>라 한다. 이 때 natural isomorphism $\\Phi$를 <b>representation</b> of $F$라 하고, $A$를 <b>universal object</b> for $F$라 한다. 또한 Yoneda lemma에 의하여 $\\Phi$에 대응되는 $u = \\Phi_{A}(\\mathrm{id}_A) \\in F(A)$를 <b>universal element</b>라 한다.</p>"
     },
     {
       "id": "bdyniee",
-      "left": 5,
-      "top": 219,
+      "left": 6,
+      "top": 221,
       "width": 36,
       "height": 26,
       "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$와 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$에 대하여</p><p style=\"text-align: center;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(-,A),F) \\cong F(A)$</p><p style=\"text-align: center; margin-bottom: 0.25em;\">$\\big[\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(A,-),G) \\cong G(A)\\big]$</p><p style=\"margin-bottom: 0.5em;\">이며$(\\eta \\mapsto \\eta_{A}(\\mathrm{id}_{A}))$, 이 때</p><p style=\"text-align: center;\">$\\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,-),F) \\Rightarrow F(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,A),-) \\Rightarrow -(A)$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[\\mathrm{Hom}(\\mathrm{Hom}(-,\\,\\cdot\\,),G) \\Rightarrow G(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(A,\\,\\cdot\\,),-) \\Rightarrow -(A)\\big]$</p><p style=\"margin-bottom: 1em;\">는 natural isomorphism이다. [<i>Yoneda Lemma</i>]</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">Functors</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\,\\cdot\\,,-) \\colon \\mathcal{C} \\to \\mathbf{Set}^{\\mathcal{C}^{\\mathrm{op}}}, &amp; A \\mapsto \\mathrm{Hom}(A,-) \\\\[-0.25em] \\mathrm{Hom}(-,\\,\\cdot\\,) \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set}^{\\mathcal{C}}, &amp; A \\mapsto \\mathrm{Hom}(-,A)\\end{gathered}$</p><p style=\"margin-bottom: 0.25em;\">를 <b>Yoneda embedding</b>이라 하며, Yoneda lemma에 의하여</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\mathrm{Hom}(-,A),\\mathrm{Hom}(-,B)) \\cong \\mathrm{Hom}(A,B) \\\\[-0.25em] \\mathrm{Hom}(\\mathrm{Hom}(A,-),\\mathrm{Hom}(B,-)) \\cong \\mathrm{Hom}(B,A) \\end{gathered}$</p><p>가 성립한다</p></div></div>"
@@ -162,30 +162,23 @@
     {
       "id": "ld22joy",
       "left": 2,
-      "top": 206,
+      "top": 208,
       "width": 0,
-      "height": -49
+      "height": -51
     },
     {
       "id": "lgz131q",
       "left": 2,
-      "top": 206,
+      "top": 208,
       "width": 2,
       "height": 0
     },
     {
       "id": "lgmrjy6",
       "left": 2,
-      "top": 219,
+      "top": 220,
       "width": 0,
-      "height": -13
-    },
-    {
-      "id": "lwv22pl",
-      "left": 6,
-      "top": 219,
-      "width": -4,
-      "height": 0
+      "height": -12
     },
     {
       "id": "luh1o6f",
