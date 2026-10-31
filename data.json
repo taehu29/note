@@ -61,8 +61,8 @@
       "left": 4,
       "top": 199,
       "width": 36,
-      "height": 4,
-      "contents": "<p>$A \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall B \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to C$</p></div></div>"
+      "height": 5,
+      "contents": "<p>$A \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall B \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to C$를 만족하면 $A$를 initial object라 한다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall B \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to C$</p></div></div>"
     },
     {
       "id": "bknmasi",
