@@ -110,7 +110,7 @@
       "top": 299,
       "width": 36,
       "height": 26,
-      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>Empty Category $\\mathcal{J}$에 대하여 $\\mathcal{J}$-diagram의 colimit이 initial object, limit이 terminal object이다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2.</span><div class=\"bullet-content\"><p>Index category $\\mathcal{J}$의 모든 morphism이 identity일 때, $\\mathcal{J}$-diagram의 colimit을 <b>coproduct</b>, limit을 <b>product</b>라 한다. Diagram $D$와 각 $i \\in \\mathrm{Ob}(\\mathcal{J})$, $A_{i} = D(i) \\in \\mathrm{Ob}(\\mathcal{C})$에 대하여 coproduct를 $\\textstyle\\coprod_{i \\in I}A_i$, product를 $\\textstyle\\prod_{i \\in I}A_i$으로 표시한다.</p></div></div>"
+      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 1em;\">Empty Category $\\mathcal{J}$에 대하여 $\\mathcal{J}$-diagram의 colimit이 initial object, limit이 terminal object이다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2.</span><div class=\"bullet-content\"><p>Index category $\\mathcal{J}$의 모든 morphism이 identity일 때, $\\mathcal{J}$-diagram의 colimit을 <b>coproduct</b>, limit을 <b>product</b>라 한다. Diagram $D$와 각 $i \\in \\mathrm{Ob}(\\mathcal{J})$, $A_{i} = D(i) \\in \\mathrm{Ob}(\\mathcal{C})$에 대하여 coproduct를 $\\textstyle\\coprod_{i \\in I}A_i$, product를 $\\textstyle\\prod_{i \\in I}A_i$으로 표시한다.</p></div></div>"
     }
   ],
   "lines": [
