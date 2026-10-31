@@ -75,7 +75,7 @@
     {
       "id": "b6r6v00",
       "left": 4,
-      "top": 210,
+      "top": 206,
       "width": 36,
       "height": 6,
       "contents": "<p style=\"margin-bottom: 0.25em;\">$U \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon U \\to A$를 만족하면, $U$를 <b>initial object</b>라 한다.</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to U$를 만족하면, $U$를 <b>terminal object</b>라 한다.</p></div></div>"
@@ -103,6 +103,14 @@
       "width": 36,
       "height": 18,
       "contents": "<p style=\"margin-bottom: 0.5em;\">Small category $\\mathcal{J}$에 대하여 functor $D \\colon \\mathcal{J} \\to \\mathcal{C}$를 $\\mathcal{J}$-<b>diagram</b>이라 하며, 이 때 $\\mathcal{J}$를 <i>index category</i>라 한다. $\\mathcal{J}$-diagram $D$와 <i>constant functor</i></p><p style=\"text-align: center; margin-bottom: 0.25em;\">$\\Delta \\colon \\mathcal{C} \\to \\mathcal{C}^{\\mathcal{J}},\\quad \\begin{array}{ccc} A &amp;&amp; (X \\mapsto A) \\\\[-0.1em] {\\scriptstyle f}\\!\\downarrow\\mkern8mu &amp; \\mapsto &amp; \\mkern24mu\\downarrow{\\scriptstyle f \\circ -} \\\\ B &amp;&amp; (X \\mapsto B)\\end{array}$</p><p style=\"margin-bottom: 0.25em;\">에 대하여 representation</p><p style=\"text-align: center;\">$\\mathrm{Hom}_{\\mathcal{C}}(-,U) \\overset{\\cong}{\\implies} \\mathrm{Hom}_{\\mathcal{C}^{\\mathcal{J}}}(\\Delta(-),D)$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[\\mathrm{Hom}_{\\mathcal{C}}(U,-) \\overset{\\cong}{\\implies} \\mathrm{Hom}_{\\mathcal{C}^{\\mathcal{J}}}(D,\\Delta(-))\\big]$</p><p>의 universal object $U$를 각각 <b>colimit</b> of $D$, <b>limit</b> of $D$라 하며, $\\operatorname{colim}D,\\;\\lim D$으로 표시한다.</p>"
+    },
+    {
+      "id": "biz8a0m",
+      "left": 6,
+      "top": 299,
+      "width": 36,
+      "height": 10,
+      "contents": "<p><br></p>"
     }
   ],
   "lines": [
