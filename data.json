@@ -62,7 +62,7 @@
       "top": 199,
       "width": 36,
       "height": 5,
-      "contents": "<p>$U \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon U \\to A$를 만족하면 $U$를 <b>initial object</b>라 한다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to U$를 만족하면 $U$를 <b>terminal object</b>라 한다.</p></div></div>"
+      "contents": "<p>$U \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon U \\to A$를 만족하면, $U$를 <b>initial object</b>라 한다.</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to U$를 만족하면, $U$를 <b>terminal object</b>라 한다.</p></div></div>"
     },
     {
       "id": "bknmasi",
