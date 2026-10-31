@@ -62,7 +62,7 @@
       "top": 199,
       "width": 36,
       "height": 4,
-      "contents": "<p><br></p>"
+      "contents": "<p>$A \\in \\mathrm{Ob}(\\mathcal{C})$가</p><p>$\\forall B \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to C$</p>"
     },
     {
       "id": "bknmasi",
