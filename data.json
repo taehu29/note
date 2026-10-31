@@ -22,12 +22,12 @@
       "top": 94,
       "width": 36,
       "height": 42,
-      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>$f \\colon A \\to B$에 대하여</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\exists f^{-1} \\colon B \\to A,\\;\\bigg\\{\\begin{aligned}&amp; f^{-1 } \\circ f = \\mathrm{id}_{A} \\\\&amp;f \\circ f^{-1} = \\mathrm{id}_{B}\\end{aligned}$</p><p style=\"margin-bottom: 0.5em;\">를 만족하면 $f$를 <b>isomorphism</b>이라 한다. 또한 두 object $A,B$ 사이에 isomorphism이 존재하면, $A,B$는 <b>isomorphic</b>하다고 하며 $A \\cong B$로 표시한다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$f \\colon A \\to B$가</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1)</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall g_1,g_2 \\colon A' \\to A,\\; (f \\circ g_1 = f \\circ g_2 \\implies g_1 = g_2)\\qquad$[<i>left cancellative</i>]</p><p style=\"margin-bottom: 0.25em;\">를 만족하면 $f$를 <b>monic</b>(<i>monomorphism</i>)이라 한다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2)</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall g_1,g_2 \\colon B \\to B',\\; (g_1 \\circ f = g_2 \\circ f \\implies g_1 = g_2)\\mkern22mu$[<i>right cancellative</i>]</p><p style=\"margin-bottom: 0.5em;\">를 만족하면 $f$를 <b>epic</b>(<i>epimorphism</i>)이라 한다.</p></div></div></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">3.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.5em;\">$r \\circ s = \\mathrm{id}_{A}$이면 $s$를 <b>section</b>(<i>right inverse</i>), $r$을 <b>retraction</b>(<i>left inverse</i>)이라 한다. 이 때, section은 monic, retraction은 epic이다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">4.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$f \\colon A \\to B$와 object $C$에 대하여</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$f_{\\ast} \\colon \\mathrm{Hom}(C,A) \\to \\mathrm{Hom}(C,B),\\quad g \\mapsto f \\circ g \\qquad$(<i>post-composition</i>)</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$f^{\\ast} \\colon \\mathrm{Hom}(B,C) \\to \\mathrm{Hom}(A,C),\\quad g \\mapsto g \\circ f \\qquad$(<i>pre-composition</i>)</p></div></div><p style=\"margin-bottom: 0.25em;\">으로 정의한다. 이 때,</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1)</span><div class=\"bullet-content\"><p>$f \\text{ is monic}\\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f_\\ast \\text{ is injective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2)</span><div class=\"bullet-content\"><p>$f \\text{ is epic} \\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f^\\ast \\text{ is surjective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">3)</span><div class=\"bullet-content\"><p>$f \\text{ is section} \\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f_\\ast \\text{ is surjective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">4)</span><div class=\"bullet-content\"><p>$f \\text{ is retraction} \\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f^\\ast \\text{ is injective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">5)</span><div class=\"bullet-content\"><p>$\\begin{aligned}[t] f \\text{ is isomorphism} &amp;\\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\; f_{\\ast} \\text{ is bijective}\\\\[-0.25em] &amp;\\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\; f^{\\ast}\\text{ is bijective}\\end{aligned}$</p></div></div></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">5.</span><div class=\"bullet-content\"><p>$f \\colon A \\to B,\\; g \\colon B \\to C$에 대하여</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$f,g$는 monic $\\implies g \\circ f$는 monic, $\\quad f,g$는 epic $\\implies g \\circ f$는 epic</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$g\\circ f$는 monic $\\implies f$는 monic,$\\quad g \\circ f$는 epic $\\implies g$는 epic</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$g \\circ f$는 section $\\implies\\! f$는 section, $g \\circ f$는 retraction $\\implies \\!g$는 retraction</p></div></div></div></div>"
+      "contents": "<div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>$f \\colon A \\to B$에 대하여</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\exists f^{-1} \\colon B \\to A,\\;\\bigg\\{\\begin{aligned}&amp; f^{-1 } \\circ f = \\mathrm{id}_{A} \\\\&amp;f \\circ f^{-1} = \\mathrm{id}_{B}\\end{aligned}$</p><p style=\"margin-bottom: 0.5em;\">를 만족하면 $f$를 <b>isomorphism</b>이라 한다. 또한 두 object $A,B$ 사이에 isomorphism이 존재하면, $A,B$는 <b>isomorphic</b>하다고 하며 $A \\cong B$로 표시한다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$f \\colon A \\to B$가</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1)</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall g_1,g_2 \\colon A' \\to A,\\; (f \\circ g_1 = f \\circ g_2 \\implies g_1 = g_2)\\qquad$[<i>left cancellative</i>]</p><p style=\"margin-bottom: 0.25em;\">를 만족하면 $f$를 <b>monic</b>(<i>monomorphism</i>)이라 한다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2)</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall g_1,g_2 \\colon B \\to B',\\; (g_1 \\circ f = g_2 \\circ f \\implies g_1 = g_2)\\mkern22mu$[<i>right cancellative</i>]</p><p style=\"margin-bottom: 0.5em;\">를 만족하면 $f$를 <b>epic</b>(<i>epimorphism</i>)이라 한다.</p></div></div></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">3.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.5em;\">$r \\circ s = \\mathrm{id}_{A}$이면 $s$를 <b>section</b>(<i>right inverse</i>), $r$을 <b>retraction</b>(<i>left inverse</i>)이라 한다. 이 때, section은 monic, retraction은 epic이다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">4.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$f \\colon A \\to B$와 object $C$에 대하여</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$f_{\\ast} \\colon \\mathrm{Hom}(C,A) \\to \\mathrm{Hom}(C,B),\\quad g \\mapsto f \\circ g \\qquad$(<i>post-composition</i>)</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$f^{\\ast} \\colon \\mathrm{Hom}(B,C) \\to \\mathrm{Hom}(A,C),\\quad g \\mapsto g \\circ f \\qquad$(<i>pre-composition</i>)</p></div></div><p style=\"margin-bottom: 0.25em;\">으로 정의한다. 이 때,</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1)</span><div class=\"bullet-content\"><p>$f \\text{ is monic}\\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f_\\ast \\text{ is injective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2)</span><div class=\"bullet-content\"><p>$f \\text{ is epic} \\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f^\\ast \\text{ is surjective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">3)</span><div class=\"bullet-content\"><p>$f \\text{ is section} \\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f_\\ast \\text{ is surjective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">4)</span><div class=\"bullet-content\"><p>$f \\text{ is retraction} \\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\;f^\\ast \\text{ is injective}$</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">5)</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.5em;\">$\\begin{aligned}[t] f \\text{ is isomorphism} &amp;\\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\; f_{\\ast} \\text{ is bijective}\\\\[-0.25em] &amp;\\iff \\forall C \\in \\mathrm{Ob}(\\mathcal{C}),\\; f^{\\ast}\\text{ is bijective}\\end{aligned}$</p></div></div></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">5.</span><div class=\"bullet-content\"><p>$f \\colon A \\to B,\\; g \\colon B \\to C$에 대하여</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$f,g$는 monic $\\implies g \\circ f$는 monic, $\\quad f,g$는 epic $\\implies g \\circ f$는 epic</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$g\\circ f$는 monic $\\implies f$는 monic,$\\mkern38mu g \\circ f$는 epic $\\implies g$는 epic</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$g \\circ f$는 section $\\implies\\! f$는 section, $\\mkern10mu g \\circ f$는 retraction $\\implies \\!g$는 retraction</p></div></div></div></div>"
     },
     {
       "id": "bhbvdo7",
       "left": 4,
-      "top": 136,
+      "top": 141,
       "width": 36,
       "height": 19,
       "contents": "<p style=\"margin-bottom: 0.5em;\">Category $\\mathcal{C},\\mathcal{D}$에 대하여 class function $F \\colon \\mathcal{C} \\to \\mathcal{D}$가</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\mathrm{Ob}(\\mathcal{C}) \\to \\mathrm{Ob}(\\mathcal{D}),\\quad \\mathrm{Hom}_{\\mathcal{C}}(A,B) \\to \\mathrm{Hom}_{\\mathcal{D}}(F(A),F(B))$</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$F(\\mathrm{id}_{A})= \\mathrm{id}_{F(A)}\\mkern96mu \\forall A \\in \\mathrm{Ob}(\\mathcal{C})$</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.5em;\">$F(g \\circ f) = F(g) \\circ F(f)\\qquad \\forall f,g \\in \\mathrm{Mor}(\\mathcal{C})$</p></div></div><p style=\"margin-bottom: 1em;\">를 만족하면 $F$를 (<i>covariant</i>) <b>functor</b>라 한다.</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">Functor $F \\colon \\mathcal{C} \\to \\mathcal{D}$가</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1)</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall A, B \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}_{\\mathcal{C}}(A,B)\\to \\mathrm{Hom}_{\\mathcal{D}}(F(A),F(B))$ is injective</p><p style=\"margin-bottom: 0.25em;\">를 만족하면 $F$를 <b>faithful</b> functor라 한다.</p></div></div><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">2)</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall A, B \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}_{\\mathcal{C}}(A,B)\\to \\mathrm{Hom}_{\\mathcal{D}}(F(A),F(B))$ is surjective</p><p>를 만족하면 $F$를 <b>full</b> functor라 한다.</p></div></div></div></div>"
@@ -51,7 +51,7 @@
     {
       "id": "b87xsbc",
       "left": 4,
-      "top": 157,
+      "top": 162,
       "width": 36,
       "height": 22,
       "contents": "<p style=\"margin-bottom: 0.5em;\">Functor $F,G \\colon \\mathcal{C} \\to \\mathcal{D}$에 대하여 class function</p><p style=\"text-align: center;\">$\\begin{aligned} \\eta \\colon \\mathrm{Ob}(\\mathcal{C}) &amp; \\to \\mathrm{Mor}(\\mathcal{D}) \\\\[-0.25em] A\\quad &amp; \\mapsto \\quad\\eta_{A}\\quad \\in \\mathrm{Hom}_{\\mathcal{D}}(F(A),G(A)) \\end{aligned}$</p><p>가 다음 조건</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\forall f \\in \\mathrm{Hom}_{\\mathcal{C}}(A,B),\\;\\eta_{A} \\circ G(f) = F(f) \\circ \\eta_{B}$</p><p style=\"text-align: center; margin-bottom: 0.75em;\">\\begin{tikzpicture}\n\\node at (-3,2) {$F(A)$};\n\\node at (3,2) {$F(B)$};\n\\node at (-3,-2) {$G(A)$};\n\\node at (3,-2) {$G(B)$};\n\\draw[-&gt;] (-1.25,2) -- node[above] {$\\scriptstyle F(f)$} (1.25,2);\n\\draw[-&gt;] (-1.25,-2) -- node[below] {$\\scriptstyle G(f)$} (1.25,-2);\n\\draw[-&gt;] (-3,1) -- node[left] {$\\scriptstyle \\eta_{A}$} (-3,-1);\n\\draw[-&gt;] (3,1) -- node[right] {$\\scriptstyle \\eta_{B}$} (3,-1);\n\\end{tikzpicture}</p><p style=\"margin-bottom: 1em;\">을 만족하면 $\\eta$를 <b>natural transformation</b>이라 하고, $\\eta \\colon F \\Rightarrow G$로 표시한다.</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>모든 $A \\in \\mathrm{Ob(\\mathcal{C})}$에 대하여 $\\eta_{A}$가 isomorphism이면, $\\eta$를 <b>natural isomorphism</b>이라 한다.</p></div></div><p><br></p>"
@@ -67,7 +67,7 @@
     {
       "id": "bix69q1",
       "left": 6,
-      "top": 181,
+      "top": 186,
       "width": 36,
       "height": 14,
       "contents": "<p style=\"margin-bottom: 0.5em;\">Functor $F \\colon \\mathcal{C} \\to \\mathcal{D},\\;G \\colon \\mathcal{D} \\to \\mathcal{C}$에 대하여 natural isomorphisms</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\eta \\colon \\mathrm{id}_{\\mathcal{C}} \\overset{\\cong}{\\Rightarrow} GF,\\quad \\varepsilon \\colon F\\:\\!G \\overset{\\cong}{\\Rightarrow} \\mathrm{id}_{\\mathcal{D}}$</p><p style=\"margin-bottom: 1em;\">이 존재하면 $F$를 <b>equivalence</b> of categories라 한다. 두 category $\\mathcal{C},\\mathcal{D}$ 사이에 equivalence가 존재하면, $\\mathcal{C},\\mathcal{D}$를 equivalent하다고 하며 $\\mathcal{C} \\simeq \\mathcal{D}$로 표시한다. Isomorphism (in $\\mathbf{CAT}$)은 당연히 equivalence이다.</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>$F$는 equivalence $\\iff \\begin{aligned}[t] &amp; F \\text{ is fully faithful} \\\\ &amp; \\forall B \\in \\mathrm{Ob}(\\mathcal{D}),\\;\\ \\exists A \\in \\mathrm{Ob}(\\mathcal{C}),\\; B \\cong F(A) \\end{aligned}$</p></div></div>"
@@ -75,7 +75,7 @@
     {
       "id": "b6r6v00",
       "left": 4,
-      "top": 200,
+      "top": 210,
       "width": 36,
       "height": 6,
       "contents": "<p style=\"margin-bottom: 0.25em;\">$U \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon U \\to A$를 만족하면, $U$를 <b>initial object</b>라 한다.</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p>$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to U$를 만족하면, $U$를 <b>terminal object</b>라 한다.</p></div></div>"
@@ -83,7 +83,7 @@
     {
       "id": "bknmasi",
       "left": 4,
-      "top": 208,
+      "top": 218,
       "width": 36,
       "height": 28,
       "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$에 대하여 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$이</p><p style=\"text-align: center;\">$\\exists U \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(-,U) \\overset{\\cong}{\\Longrightarrow} F$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[\\exists U \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(U,-) \\overset{\\cong}{\\Longrightarrow} G\\big]$</p><p style=\"margin-bottom: 0.5em;\">를 만족하면 $F$를 <b>representable functor</b>라 한다. 이 때 natural isomorphism $\\Phi$를 <b>representation</b> of $F$라 하고, $U$를 <b>universal object</b> for $F$라 한다. 또한 Yoneda lemma에 의하여 $\\Phi$에 대응되는 $u = \\Phi_{U}(\\mathrm{id}_U) \\in F(U)$를 <b>universal element</b>라 한다.</p><p style=\"margin-bottom: 0.5em;\">위를 만족하는 $F$와 $\\Phi$(또는 universal element $u$)을 <b>universal property</b> of $U$라 한다. $F$와 $u$에 대하여 위 내용을 다시 서술하면,</p><p style=\"text-align: center;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\;\\text{and}\\; \\forall x \\in F(A),\\; \\exists! f \\colon A \\to U,\\; Ff(x)=u$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[ \\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\;\\text{and}\\; \\forall x \\in F(A),\\; \\exists! f \\colon U \\to A,\\; Ff(u)=x \\big]$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">\\begin{tikzpicture}\n\\node at (-3,2) {$A$};\n\\node at (3,2) {$U$};\n\\node at (-3,-2) {$F(A)$};\n\\node at (3,-2) {$F(U)$};\n\\node at (-3,-3.5) {$x$};\n\\node at (3,-3.5) {$u$};\n\\draw[-&gt;,shorten=1] (-3,2) -- node[above] {$\\scriptstyle \\exists!f$} (3,2);\n\\draw[-&gt;,shorten=1.6] (-3,-2) -- node[above] {$\\scriptstyle Ff$} (3,-2);\n\\draw[-&gt;,shorten=1.6] (-3,-3.5) -- (3,-3.5);\n\\draw (-1.4,-3.7) -- (-1.4,-3.3);\n\\end{tikzpicture}$\\qquad\\qquad$\\begin{tikzpicture}\n\\node at (-3,2) {$U$};\n\\node at (3,2) {$A$};\n\\node at (-3,-2) {$F(U)$};\n\\node at (3,-2) {$F(A)$};\n\\node at (-3,-3.5) {$u$};\n\\node at (3,-3.5) {$x$};\n\\draw[-&gt;,shorten=1] (-3,2) -- node[above] {$\\scriptstyle \\exists!f$} (3,2);\n\\draw[-&gt;,shorten=1.6] (-3,-2) -- node[above] {$\\scriptstyle Ff$} (3,-2);\n\\draw[-&gt;,shorten=1.6] (-3,-3.5) -- (3,-3.5);\\draw (-1.4,-3.7) -- (-1.4,-3.3);\n\\end{tikzpicture}</p><p>이다.</p>"
@@ -110,7 +110,7 @@
       "left": 2,
       "top": 56,
       "width": 0,
-      "height": 80
+      "height": 85
     },
     {
       "id": "ll8ivai",
@@ -143,49 +143,49 @@
     {
       "id": "lk2i33v",
       "left": 2,
-      "top": 136,
+      "top": 141,
       "width": 2,
       "height": 0
     },
     {
       "id": "lpj4fd0",
       "left": 2,
-      "top": 136,
+      "top": 141,
       "width": 0,
       "height": 21
     },
     {
       "id": "lbh4vw8",
       "left": 2,
-      "top": 157,
+      "top": 162,
       "width": 2,
       "height": 0
     },
     {
       "id": "lujq426",
       "left": 4,
-      "top": 157,
+      "top": 162,
       "width": 0,
       "height": 24
     },
     {
       "id": "l9xnfvz",
       "left": 4,
-      "top": 181,
+      "top": 186,
       "width": 2,
       "height": 0
     },
     {
       "id": "ld22joy",
       "left": 2,
-      "top": 208,
+      "top": 218,
       "width": 0,
-      "height": -51
+      "height": -56
     },
     {
       "id": "lgz131q",
       "left": 2,
-      "top": 208,
+      "top": 218,
       "width": 2,
       "height": 0
     },
@@ -194,7 +194,7 @@
       "left": 2,
       "top": 220,
       "width": 0,
-      "height": -12
+      "height": -2
     },
     {
       "id": "luh1o6f",
