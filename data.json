@@ -234,18 +234,18 @@
       "height": 20
     },
     {
-      "id": "luh1o6f",
-      "left": 53,
-      "top": 291,
-      "width": 0,
-      "height": 22
-    },
-    {
       "id": "l9lmjt0",
       "left": 4,
       "top": 299,
       "width": 2,
       "height": 0
+    },
+    {
+      "id": "luh1o6f",
+      "left": 47,
+      "top": 346,
+      "width": 0,
+      "height": 22
     }
   ]
 }
