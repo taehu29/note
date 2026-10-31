@@ -49,9 +49,17 @@
       "contents": "<p style=\"margin-bottom: 0.5em;\">Functor $F,G \\colon \\mathcal{C} \\to \\mathcal{D}$에 대하여 class function</p><p style=\"text-align: center;\">$\\begin{aligned} \\eta \\colon \\mathrm{Ob}(\\mathcal{C}) &amp; \\to \\mathrm{Mor}(\\mathcal{D}) \\\\[-0.25em] A\\quad &amp; \\mapsto \\quad\\eta_{A}\\quad \\in \\mathrm{Hom}_{\\mathcal{D}}(F(A),G(A)) \\end{aligned}$</p><p>가 다음 조건</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\forall f \\in \\mathrm{Hom}_{\\mathcal{C}}(A,B),\\;\\eta_{A} \\circ G(f) = F(f) \\circ \\eta_{B}$</p><p style=\"text-align: center; margin-bottom: 0.75em;\">\\begin{tikzpicture}\n\\node at (-3,2) {$F(A)$};\n\\node at (3,2) {$F(B)$};\n\\node at (-3,-2) {$G(A)$};\n\\node at (3,-2) {$G(B)$};\n\\draw[-&gt;] (-1.25,2) -- node[above] {$\\scriptstyle F(f)$} (1.25,2);\n\\draw[-&gt;] (-1.25,-2) -- node[below] {$\\scriptstyle G(f)$} (1.25,-2);\n\\draw[-&gt;] (-3,1) -- node[left] {$\\scriptstyle \\eta_{A}$} (-3,-1);\n\\draw[-&gt;] (3,1) -- node[right] {$\\scriptstyle \\eta_{B}$} (3,-1);\n\\end{tikzpicture}</p><p style=\"margin-bottom: 1em;\">을 만족하면 $\\eta$를 <b>natural transformation</b>이라 하고, $\\eta \\colon F \\Rightarrow G$로 표시한다.</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>모든 $A \\in \\mathrm{Ob(\\mathcal{C})}$에 대하여 $\\eta_{A}$가 isomorphism이면, $\\eta$를 <b>natural isomorphism</b>이라 한다.</p></div></div><p><br></p>"
     },
     {
+      "id": "bt6lxik",
+      "left": 44,
+      "top": 157,
+      "width": 36,
+      "height": 8,
+      "contents": "<p><br></p>"
+    },
+    {
       "id": "bjaf209",
       "left": 44,
-      "top": 158,
+      "top": 170,
       "width": 36,
       "height": 15,
       "contents": "<p style=\"margin-bottom: 0.5em;\">Category $\\mathcal{C},\\mathcal{D},\\mathcal{E}$와 functor $F \\colon \\mathcal{C} \\to \\mathcal{E},\\; G \\colon \\mathcal{D} \\to \\mathcal{E}$에 대하여</p><p style=\"padding-left: 1em;\">$\\mathrm{Ob}(F \\!\\downarrow\\!G)$ : $(A,B,f)\\quad$where $A \\in \\mathrm{Ob}(\\mathcal{C}),\\; B \\in \\mathrm{Ob}(\\mathcal{D}),\\; f \\colon F(A) \\to G(B)$</p><p style=\"padding-left: 1em; margin-bottom: 0.5em;\">$\\mathrm{Mor}(F \\!\\downarrow\\!G)$ : $(h,k)\\quad$where $h \\colon A \\to A',\\; k \\colon B \\to B'$, satisfying</p><p style=\"padding-left: 1em; text-align: center; margin-bottom: 0.5em;\">\\begin{tikzpicture}\n\\node at (-3,2) {$F(A)$};\n\\node at (3,2) {$G(B)$};\n\\node at (-3,-2) {$F(A')$};\n\\node at (3,-2) {$G(B')$};\n\\draw[-&gt;,shorten=1.8] (-3,2) -- node[above] {$\\scriptstyle f$} (3,2);\n\\draw[-&gt;,shorten=1.8] (-3,-2) -- node[below] {$\\scriptstyle f$} (3,-2);\n\\draw[-&gt;,shorten=1] (-3,2) -- node[xshift=-1] {$\\scriptstyle F(h)$} (-3,-2);\n\\draw[-&gt;,shorten=1] (3,2) -- node[xshift=1] {$\\scriptstyle G(k)$} (3,-2);\n\\node at (0,0) {$\\circlearrowright$}\n\\end{tikzpicture}</p><p>으로 정의된 category $(F \\!\\downarrow\\!G)$를 <b>comma category</b>라 한다.</p>"
