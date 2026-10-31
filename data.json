@@ -57,6 +57,14 @@
       "contents": "<p style=\"margin-bottom: 0.5em;\">Functor $F \\colon \\mathcal{C} \\to \\mathcal{D},\\;G \\colon \\mathcal{D} \\to \\mathcal{C}$에 대하여 natural isomorphisms</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\eta \\colon \\mathrm{id}_{\\mathcal{C}} \\overset{\\cong}{\\Rightarrow} GF,\\quad \\varepsilon \\colon F\\:\\!G \\overset{\\cong}{\\Rightarrow} \\mathrm{id}_{\\mathcal{D}}$</p><p style=\"margin-bottom: 1em;\">이 존재하면 $F$를 <b>equivalence</b> of categories라 한다. 두 category $\\mathcal{C},\\mathcal{D}$ 사이에 equivalence가 존재하면, $\\mathcal{C},\\mathcal{D}$를 equivalent하다고 하며 $\\mathcal{C} \\simeq \\mathcal{D}$로 표시한다. Isomorphism (in $\\mathbf{CAT}$)은 당연히 equivalence이다.</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p>$F$는 equivalence $\\iff \\begin{aligned}[t] &amp; F \\text{ is fully faithful} \\\\ &amp; \\forall B \\in \\mathrm{Ob}(\\mathcal{D}),\\;\\ \\exists A \\in \\mathrm{Ob}(\\mathcal{C}),\\; B \\cong F(A) \\end{aligned}$</p></div></div>"
     },
     {
+      "id": "b6r6v00",
+      "left": 4,
+      "top": 199,
+      "width": 36,
+      "height": 4,
+      "contents": "<p><br></p>"
+    },
+    {
       "id": "bknmasi",
       "left": 4,
       "top": 205,
