@@ -110,7 +110,7 @@
       "top": 299,
       "width": 36,
       "height": 10,
-      "contents": "<p><br></p>"
+      "contents": "<p>Empty Category $\\mathcal{J}$에 대하여 $\\mathcal{J}$-diagram의 colimit이 initial object, limit이 terminal object이다.</p>"
     }
   ],
   "lines": [
