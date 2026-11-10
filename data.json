@@ -38,7 +38,7 @@
       "top": 131,
       "width": 36,
       "height": 11,
-      "contents": "<p>모든 morphism이 isomorphism인 category를 <b>groupoid</b>라 한다.</p>"
+      "contents": "<p>모든 morphism이 isomorphism인 category를 <b>groupoid</b>라 한다.</p><p><br></p><p>Identity morphism만 존재하는 category를 discrete category라 한다.</p>"
     },
     {
       "id": "bhbvdo7",
@@ -55,14 +55,6 @@
       "width": 36,
       "height": 8,
       "contents": "<p style=\"margin-bottom: 0.25em;\">Category $\\mathbf{Cat}, \\mathbf{CAT}$을</p><p style=\"padding-left: 2em;\">$\\mathrm{Ob}(\\mathbf{Cat})$ : small categories,$\\mkern99mu \\mathrm{Mor}(\\mathbf{Cat})$ : functors</p><p style=\"padding-left: 2em; margin-bottom: 0.25em;\">$\\mathrm{Ob}(\\mathbf{CAT})$ : locally small categories,$\\qquad \\mathrm{Mor}(\\mathbf{Cat})$ : functors</p><p>으로 정의한다. </p>"
-    },
-    {
-      "id": "bft8ne4",
-      "left": 86,
-      "top": 147,
-      "width": 36,
-      "height": 8,
-      "contents": "<p>Identity morphism만 존재하는 category를 <b>discrete category</b>라 한다.</p>"
     },
     {
       "id": "bt6lxik",
