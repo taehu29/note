@@ -126,7 +126,7 @@
       "top": 225,
       "width": 36,
       "height": 7,
-      "contents": ""
+      "contents": "<p>Faithful functor $U \\colon \\mathcal{C} \\to \\mathbf{Set}$를 <b>forgetful functor</b>라 한다. Forgetful functor가 존재하면 $\\mathcal{C}$를 <b>concrete category</b>라 한다.</p>"
     },
     {
       "id": "bdyniee",
