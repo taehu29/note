@@ -49,6 +49,14 @@
       "contents": "<p style=\"margin-bottom: 0.25em;\">Category $\\mathbf{Cat}, \\mathbf{CAT}$을</p><p style=\"padding-left: 2em;\">$\\mathrm{Ob}(\\mathbf{Cat})$ : small categories,$\\mkern99mu \\mathrm{Mor}(\\mathbf{Cat})$ : functors</p><p style=\"padding-left: 2em; margin-bottom: 0.25em;\">$\\mathrm{Ob}(\\mathbf{CAT})$ : locally small categories,$\\qquad \\mathrm{Mor}(\\mathbf{Cat})$ : functors</p><p>으로 정의한다. </p>"
     },
     {
+      "id": "bft8ne4",
+      "left": 86,
+      "top": 147,
+      "width": 36,
+      "height": 8,
+      "contents": ""
+    },
+    {
       "id": "bt6lxik",
       "left": 44,
       "top": 156,
