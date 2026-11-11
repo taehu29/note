@@ -105,6 +105,14 @@
       "contents": "<p style=\"margin-bottom: 0.25em;\">$U \\in \\mathrm{Ob}(\\mathcal{C})$가</p><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon U \\to A$를 만족하면, $U$를 <b>initial object</b>라 한다.</p></div></div><div class=\"bullet-item\" style=\"padding-left: 1em;\"><span class=\"bullet-marker\" contenteditable=\"false\">•</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.5em;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\exists! f \\colon A \\to U$를 만족하면, $U$를 <b>terminal object</b>라 한다.</p></div></div><p>Initial이면서 동시에 terminal인 object가 존재하면 이를 <b>zero object</b>라 한다. 또한 morphism $f\\colon A \\to B$가 composition $A \\rightarrow 0 \\to B\\;$($0$는 zero object)이면 이를 <b>zero morphism</b>이라 한다.</p>"
     },
     {
+      "id": "bd2n2ni",
+      "left": 93,
+      "top": 210,
+      "width": 36,
+      "height": 7,
+      "contents": "<p>Faithful functor $U \\colon \\mathcal{C} \\to \\mathbf{Set}$를 <b>forgetful functor</b>라 한다. Forgetful functor가 존재하면 $\\mathcal{C}$를 <b>concrete category</b>라 한다.</p>"
+    },
+    {
       "id": "bknmasi",
       "left": 4,
       "top": 218,
@@ -113,17 +121,9 @@
       "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$에 대하여 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$이</p><p style=\"text-align: center;\">$\\exists U \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(-,U) \\overset{\\cong}{\\Longrightarrow} F$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[\\exists U \\in \\mathrm{Ob}(\\mathcal{C}) \\quad \\text{and} \\quad \\exists \\Phi \\colon \\mathrm{Hom}_{\\mathcal{C}}(U,-) \\overset{\\cong}{\\Longrightarrow} G\\big]$</p><p style=\"margin-bottom: 0.5em;\">를 만족하면 $F$를 <b>representable functor</b>라 한다. 이 때 natural isomorphism $\\Phi$를 <b>representation</b> of $F$라 하고, $U$를 <b>universal object</b> for $F$라 한다. 또한 Yoneda lemma에 의하여 $\\Phi$에 대응되는 $u = \\Phi_{U}(\\mathrm{id}_U) \\in F(U)$를 <b>universal element</b>라 한다.</p><p style=\"margin-bottom: 0.5em;\">위를 만족하는 $F$와 $\\Phi$(또는 universal element $u$)을 <b>universal property</b> of $U$라 한다. $F$와 $u$에 대하여 위 내용을 다시 서술하면,</p><p style=\"text-align: center;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\;\\text{and}\\; \\forall x \\in F(A),\\; \\exists! f \\colon A \\to U,\\; Ff(x)=u$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[ \\forall A \\in \\mathrm{Ob}(\\mathcal{C}) \\;\\text{and}\\; \\forall x \\in F(A),\\; \\exists! f \\colon U \\to A,\\; Ff(u)=x \\big]$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">\\begin{tikzpicture}\n\\node at (-3,2) {$A$};\n\\node at (3,2) {$U$};\n\\node at (-3,-2) {$F(A)$};\n\\node at (3,-2) {$F(U)$};\n\\node at (-3,-3.5) {$x$};\n\\node at (3,-3.5) {$u$};\n\\draw[-&gt;,shorten=1] (-3,2) -- node[above] {$\\scriptstyle \\exists!f$} (3,2);\n\\draw[-&gt;,shorten=1.6] (-3,-2) -- node[above] {$\\scriptstyle Ff$} (3,-2);\n\\draw[-&gt;,shorten=1.6] (-3,-3.5) -- (3,-3.5);\n\\draw (-1.4,-3.7) -- (-1.4,-3.3);\n\\end{tikzpicture}$\\qquad\\qquad$\\begin{tikzpicture}\n\\node at (-3,2) {$U$};\n\\node at (3,2) {$A$};\n\\node at (-3,-2) {$F(U)$};\n\\node at (3,-2) {$F(A)$};\n\\node at (-3,-3.5) {$u$};\n\\node at (3,-3.5) {$x$};\n\\draw[-&gt;,shorten=1] (-3,2) -- node[above] {$\\scriptstyle \\exists!f$} (3,2);\n\\draw[-&gt;,shorten=1.6] (-3,-2) -- node[above] {$\\scriptstyle Ff$} (3,-2);\n\\draw[-&gt;,shorten=1.6] (-3,-3.5) -- (3,-3.5);\\draw (-1.4,-3.7) -- (-1.4,-3.3);\n\\end{tikzpicture}</p><p>이다.</p>"
     },
     {
-      "id": "bd2n2ni",
-      "left": 46,
-      "top": 225,
-      "width": 36,
-      "height": 7,
-      "contents": "<p>Faithful functor $U \\colon \\mathcal{C} \\to \\mathbf{Set}$를 <b>forgetful functor</b>라 한다. Forgetful functor가 존재하면 $\\mathcal{C}$를 <b>concrete category</b>라 한다.</p>"
-    },
-    {
       "id": "bdyniee",
-      "left": 6,
-      "top": 248,
+      "left": 42,
+      "top": 218,
       "width": 36,
       "height": 26,
       "contents": "<p style=\"margin-bottom: 0.5em;\">(Locally small) Category $\\mathcal{C}$와 functor $F \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set} \\;(G \\colon \\mathcal{C} \\to \\mathbf{Set})$에 대하여</p><p style=\"text-align: center;\">$\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(-,A),F) \\cong F(A)$</p><p style=\"text-align: center; margin-bottom: 0.25em;\">$\\big[\\forall A \\in \\mathrm{Ob}(\\mathcal{C}),\\; \\mathrm{Hom}(\\mathrm{Hom}(A,-),G) \\cong G(A)\\big]$</p><p style=\"margin-bottom: 0.5em;\">이며$(\\eta \\mapsto \\eta_{A}(\\mathrm{id}_{A}))$, 이 때</p><p style=\"text-align: center;\">$\\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,-),F) \\Rightarrow F(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(\\,\\cdot\\,,A),-) \\Rightarrow -(A)$</p><p style=\"text-align: center; margin-bottom: 0.5em;\">$\\big[\\mathrm{Hom}(\\mathrm{Hom}(-,\\,\\cdot\\,),G) \\Rightarrow G(-), \\quad \\mathrm{Hom}(\\mathrm{Hom}(A,\\,\\cdot\\,),-) \\Rightarrow -(A)\\big]$</p><p style=\"margin-bottom: 1em;\">는 natural isomorphism이다. [<i>Yoneda Lemma</i>]</p><div class=\"bullet-item\"><span class=\"bullet-marker\" contenteditable=\"false\">1.</span><div class=\"bullet-content\"><p style=\"margin-bottom: 0.25em;\">Functors</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\,\\cdot\\,,-) \\colon \\mathcal{C} \\to \\mathbf{Set}^{\\mathcal{C}^{\\mathrm{op}}}, &amp; A \\mapsto \\mathrm{Hom}(A,-) \\\\[-0.25em] \\mathrm{Hom}(-,\\,\\cdot\\,) \\colon \\mathcal{C}^{\\mathrm{op}} \\to \\mathbf{Set}^{\\mathcal{C}}, &amp; A \\mapsto \\mathrm{Hom}(-,A)\\end{gathered}$</p><p style=\"margin-bottom: 0.25em;\">를 <b>Yoneda embedding</b>이라 하며, Yoneda lemma에 의하여</p><p style=\"margin-bottom: 0.25em; text-align: center;\">$\\begin{gathered} \\mathrm{Hom}(\\mathrm{Hom}(-,A),\\mathrm{Hom}(-,B)) \\cong \\mathrm{Hom}(A,B) \\\\[-0.25em] \\mathrm{Hom}(\\mathrm{Hom}(A,-),\\mathrm{Hom}(B,-)) \\cong \\mathrm{Hom}(B,A) \\end{gathered}$</p><p>가 성립한다</p></div></div>"
@@ -238,11 +238,11 @@
       "height": 0
     },
     {
-      "id": "lb2754t",
+      "id": "lr8jz02",
       "left": 4,
       "top": 218,
-      "width": 0,
-      "height": 30
+      "width": 38,
+      "height": 0
     },
     {
       "id": "lgmrjy6",
@@ -250,13 +250,6 @@
       "top": 246,
       "width": 0,
       "height": -28
-    },
-    {
-      "id": "ldtcyce",
-      "left": 4,
-      "top": 248,
-      "width": 2,
-      "height": 0
     },
     {
       "id": "lq2qigf",
